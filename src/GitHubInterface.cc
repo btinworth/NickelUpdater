@@ -1,10 +1,10 @@
-#include "PluginRelease.h"
+#include "GitHubInterface.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
 
-PluginRelease PluginReleaseClient::GetLatestRelease(const QString& pluginId) const
+PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
     QProcess curl;
     curl.start("curl", QStringList{
@@ -18,12 +18,7 @@ PluginRelease PluginReleaseClient::GetLatestRelease(const QString& pluginId) con
         return {};
     }
 
-    return ParseRelease(curl.readAllStandardOutput());
-}
-
-PluginRelease PluginReleaseClient::ParseRelease(const QByteArray& data)
-{
-    const auto document = QJsonDocument::fromJson(data);
+    const auto document = QJsonDocument::fromJson(curl.readAllStandardOutput());
     if (!document.isObject())
     {
         return {};

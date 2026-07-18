@@ -14,10 +14,3 @@ struct PluginRelease
         return !KoboRootUrl.isEmpty() && !Checksum.isEmpty();
     }
 };
-
-class PluginReleaseClient
-{
-public:
-    PluginRelease GetLatestRelease(const QString& pluginId) const;
-    static PluginRelease ParseRelease(const QByteArray& data);
-};

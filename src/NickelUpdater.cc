@@ -1,6 +1,6 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
-#include "PluginRelease.h"
+#include "GitHubInterface.h"
 #include "UserConfig.h"
 #include <NickelHook.h>
 #include <QDir>
@@ -41,7 +41,7 @@ void NickelUpdater::OnNetworkConnected()
     const auto& plugins = config.GetPlugins();
     nh_log("NickelUpdater: found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
 
-    PluginReleaseClient releaseClient;
+    GitHubInterface releaseClient;
     for (const auto& plugin : plugins)
     {
         const auto release = releaseClient.GetLatestRelease(plugin.PluginId);
