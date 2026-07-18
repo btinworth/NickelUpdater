@@ -1,0 +1,16 @@
+# NickelCloud configuration file
+# The '#' character denotes comments, anything following it will be ignored
+
+[general]
+mode = copy # 'copy' to only update or add, or 'sync' to also delete local files
+interval = 300 # frequency to check (in seconds), set to 0 to disable
+transfers = 1 # number of concurrent file transfers
+log = false # write a log file to /mnt/onboard when a sync changes files or fails
+extra_args = # extra arguments passed through to rclone as-is (space separated, no validation)
+
+[sources]
+# List of cloud sources to sync, one per line, in the format:
+#   remote:folder = /local/destination
+# The 'remote' must be configured in the rclone.conf file
+# For example, to copy the eBooks directory from OneDrive to the Books directory on the Kobo use:
+#   OneDrive:eBooks = Books

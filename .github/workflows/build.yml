@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  workflow_call:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Build
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" -w "$PWD" \
+            -u "$(id -u):$(id -g)" -e HOME=/tmp \
+            ghcr.io/pgaskin/nickeltc:1 \
+            sh -c 'make && make koboroot'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: KoboRoot.tgz
+          archive: false
