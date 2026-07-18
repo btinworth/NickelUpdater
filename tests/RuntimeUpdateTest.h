@@ -1,0 +1,45 @@
+#pragma once
+
+#include <QObject>
+#include <QString>
+#include <QByteArray>
+
+class RuntimeUpdateTest : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void init();
+    void cleanup();
+
+    void batchesMultipleUpdatesIntoSingleFinalize();
+    void conflictLikeFailureSkipsOnePluginButAppliesOthers();
+    void noEffectiveChangeDoesNotFinalize();
+
+private:
+    QString CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const;
+    QString Sha256OfFile(const QString& filePath) const;
+    void WriteFakeCurlScript() const;
+    void WriteFakeRebootScript() const;
+    QString ReadFile(const QString& path) const;
+    QStringList TarList(const QString& archivePath) const;
+    void WriteConfig(const QString& contents) const;
+
+    QString TempRoot;
+    QString BinDir;
+    QString DataDir;
+    QString OnboardDir;
+    QString ConfigPath;
+    QString TemplatePath;
+
+    QByteArray OnboardDirBytes;
+    QByteArray ConfigDirBytes;
+    QByteArray ConfigPathBytes;
+    QByteArray TemplatePathBytes;
+    QByteArray OriginalPath;
+
+    const char* OriginalOnboardDir = nullptr;
+    const char* OriginalConfigDir = nullptr;
+    const char* OriginalConfigPath = nullptr;
+    const char* OriginalTemplatePath = nullptr;
+};
