@@ -6,6 +6,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QProcess>
 
 namespace
@@ -103,10 +104,11 @@ bool RebootDevice()
 
 bool EnsureMergeDirectoryReady(const QString& mergeDirPath)
 {
-    QDir mergeDir(mergeDirPath);
-    if (mergeDir.exists() && !mergeDir.removeRecursively())
+    const auto stagingRootPath = QFileInfo(mergeDirPath).dir().absolutePath();
+    QDir stagingRoot(stagingRootPath);
+    if (stagingRoot.exists() && !stagingRoot.removeRecursively())
     {
-        nh_log("NickelUpdater: failed to clear merge directory: %s", qPrintable(mergeDirPath));
+        nh_log("NickelUpdater: failed to clear staging directory: %s", qPrintable(stagingRootPath));
         return false;
     }
 
