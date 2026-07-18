@@ -75,8 +75,17 @@ void NickelUpdater::OnNetworkConnected()
             continue;
         }
 
+        const auto onboardFilePath = QDir(ONBOARD_DIR).filePath("KoboRoot.tgz");
+        QFile::remove(onboardFilePath);
+        if (!QFile::copy(stageFilePath, onboardFilePath))
+        {
+            nh_log("NickelUpdater: failed to publish KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+            continue;
+        }
+
         nh_log("NickelUpdater: selected release %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
         nh_log("NickelUpdater: staged KoboRoot.tgz at %s", qPrintable(stageFilePath));
+        nh_log("NickelUpdater: published KoboRoot.tgz to %s", qPrintable(onboardFilePath));
         nh_log("NickelUpdater: KoboRoot.tgz checksum %s", qPrintable(release.Checksum));
     }
 
