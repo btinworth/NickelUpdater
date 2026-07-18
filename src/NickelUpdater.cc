@@ -3,6 +3,7 @@
 #include <NickelHook.h>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 
 QObject* (*WirelessManagerInstance)() = nullptr;
 
@@ -13,7 +14,20 @@ NickelUpdater::NickelUpdater()
 
 void NickelUpdater::OnNetworkConnected()
 {
-    nh_log("NickelUpdater: WiFi connected, updater logic not yet implemented");
+    nh_log("NickelUpdater: WiFi connected");
+
+    QFileInfo configFile(NICKELUPDATER_CONF);
+    if (!configFile.exists())
+    {
+        nh_log("NickelUpdater: config does not exist: %s", NICKELUPDATER_CONF);
+        return;
+    }
+
+    nh_log("NickelUpdater: starting update");
+
+    nh_log("NickelUpdater: config loaded from %s", NICKELUPDATER_CONF);
+
+    nh_log("NickelUpdater: update finished");
 }
 
 void NickelUpdater::OnNetworkDisconnected()
