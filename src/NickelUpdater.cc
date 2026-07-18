@@ -1,5 +1,6 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
+#include "UserConfig.h"
 #include <NickelHook.h>
 #include <QDir>
 #include <QFile>
@@ -26,6 +27,23 @@ void NickelUpdater::OnNetworkConnected()
     nh_log("NickelUpdater: starting update");
 
     nh_log("NickelUpdater: config loaded from %s", NICKELUPDATER_CONF);
+
+    UserConfig config;
+    if (!config.Load(NICKELUPDATER_CONF))
+    {
+        nh_log("NickelUpdater: failed to parse config");
+        return;
+    }
+
+    const auto& plugins = config.GetPlugins();
+    nh_log("NickelUpdater: found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
+    for (const auto& plugin : plugins)
+    {
+        nh_log(
+            "NickelUpdater: plugin %s installed=%s",
+            qPrintable(plugin.pluginId),
+            qPrintable(plugin.installedVersion));
+    }
 
     nh_log("NickelUpdater: update finished");
 }

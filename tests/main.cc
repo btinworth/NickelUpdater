@@ -1,3 +1,4 @@
+#include "ConfigParseTest.h"
 #include "SmokeTest.h"
 #include <QtTest>
 
@@ -7,6 +8,9 @@ int main(int argc, char** argv)
 
     SmokeTest smokeTest;
     status |= QTest::qExec(&smokeTest, argc, argv);
+
+    ConfigParseTest configParseTest;
+    status |= QTest::qExec(&configParseTest, argc, argv);
 
     return status;
 }
