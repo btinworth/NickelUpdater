@@ -41,6 +41,9 @@ void NickelUpdater::OnNetworkConnected()
     const auto& plugins = config.GetPlugins();
     nh_log("NickelUpdater: found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
 
+    bool hasUpdates = false;
+    const auto mergeDirPath = MergeDirectoryPath();
+
     GitHubInterface releaseClient;
     for (const auto& plugin : plugins)
     {
@@ -81,31 +84,74 @@ void NickelUpdater::OnNetworkConnected()
             continue;
         }
 
-        const auto onboardFilePath = QDir(ONBOARD_DIR).filePath("KoboRoot.tgz");
-        QFile::remove(onboardFilePath);
-        if (!QFile::copy(stageFilePath, onboardFilePath))
+        if (!hasUpdates)
         {
-            nh_log("NickelUpdater: failed to publish KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+            QDir mergeDir(mergeDirPath);
+            if (mergeDir.exists() && !mergeDir.removeRecursively())
+            {
+                nh_log("NickelUpdater: failed to clear merge directory: %s", qPrintable(mergeDirPath));
+                return;
+            }
+
+            if (!QDir().mkpath(mergeDirPath))
+            {
+                nh_log("NickelUpdater: failed to create merge directory: %s", qPrintable(mergeDirPath));
+                return;
+            }
+        }
+
+        if (!ExtractArchive(stageFilePath, mergeDirPath))
+        {
+            nh_log("NickelUpdater: failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
             continue;
         }
 
-        if (!config.SetTag(plugin.PluginId, release.TagName) || !config.Save(NICKELUPDATER_CONF))
+        if (!config.SetTag(plugin.PluginId, release.TagName))
         {
             nh_log("NickelUpdater: failed to update tag for %s", qPrintable(plugin.PluginId));
             continue;
         }
 
-        if (!RebootDevice())
-        {
-            nh_log("NickelUpdater: failed to reboot after publishing KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
-            continue;
-        }
+        hasUpdates = true;
 
         nh_log("NickelUpdater: selected release %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
         nh_log("NickelUpdater: staged KoboRoot.tgz at %s", qPrintable(stageFilePath));
-        nh_log("NickelUpdater: published KoboRoot.tgz to %s", qPrintable(onboardFilePath));
         nh_log("NickelUpdater: KoboRoot.tgz checksum %s", qPrintable(release.Checksum));
     }
+
+    if (!hasUpdates)
+    {
+        nh_log("NickelUpdater: no updates to apply");
+        nh_log("NickelUpdater: update finished");
+        return;
+    }
+
+    if (!config.Save(NICKELUPDATER_CONF))
+    {
+        nh_log("NickelUpdater: failed to save updated tags");
+        return;
+    }
+
+    const auto mergedArchivePath = MergedArchivePath();
+    if (!CreateArchive(mergeDirPath, mergedArchivePath))
+    {
+        nh_log("NickelUpdater: failed to create merged KoboRoot.tgz");
+        return;
+    }
+
+    if (!PublishArchive(mergedArchivePath))
+    {
+        nh_log("NickelUpdater: failed to publish merged KoboRoot.tgz");
+        return;
+    }
+
+    if (!RebootDevice())
+    {
+        nh_log("NickelUpdater: failed to reboot after publishing merged KoboRoot.tgz");
+        return;
+    }
+
+    nh_log("NickelUpdater: published merged KoboRoot.tgz");
 
     nh_log("NickelUpdater: update finished");
 }
@@ -183,6 +229,50 @@ bool NickelUpdater::VerifySha256(const QString& filePath, const QString& expecte
 QString NickelUpdater::StageDirectoryForPlugin(const QString& pluginId)
 {
     return QDir(CONFIG_DIR).filePath(QString("staging/%1").arg(pluginId));
+}
+
+QString NickelUpdater::MergeDirectoryPath()
+{
+    return QDir(CONFIG_DIR).filePath("staging/_merged_root");
+}
+
+QString NickelUpdater::MergedArchivePath()
+{
+    return QDir(CONFIG_DIR).filePath("staging/KoboRoot.merged.tgz");
+}
+
+bool NickelUpdater::ExtractArchive(const QString& archivePath, const QString& outputDir)
+{
+    QProcess tar;
+    tar.start("tar", QStringList{
+        "-xzf",
+        archivePath,
+        "-C",
+        outputDir,
+    });
+    return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
+}
+
+bool NickelUpdater::CreateArchive(const QString& sourceDir, const QString& archivePath)
+{
+    QFile::remove(archivePath);
+
+    QProcess tar;
+    tar.start("tar", QStringList{
+        "-czf",
+        archivePath,
+        "-C",
+        sourceDir,
+        ".",
+    });
+    return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
+}
+
+bool NickelUpdater::PublishArchive(const QString& archivePath)
+{
+    const auto onboardFilePath = QDir(ONBOARD_DIR).filePath("KoboRoot.tgz");
+    QFile::remove(onboardFilePath);
+    return QFile::copy(archivePath, onboardFilePath);
 }
 
 bool NickelUpdater::RebootDevice()
