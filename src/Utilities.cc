@@ -9,9 +9,7 @@
 #include <QFileInfo>
 #include <QProcess>
 
-namespace
-{
-QString ExtractSha256Digest(const QString& digest)
+QString Utilities::ExtractSha256Digest(const QString& digest)
 {
     const int colon = digest.indexOf(':');
     if (colon < 0)
@@ -22,7 +20,7 @@ QString ExtractSha256Digest(const QString& digest)
     return digest.mid(colon + 1).trimmed();
 }
 
-bool DownloadFile(const QString& url, const QString& outputPath)
+bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 {
     QProcess curl;
     QStringList args;
@@ -36,7 +34,7 @@ bool DownloadFile(const QString& url, const QString& outputPath)
     return curl.waitForFinished() && curl.exitStatus() == QProcess::NormalExit && curl.exitCode() == 0;
 }
 
-bool VerifySha256(const QString& filePath, const QString& expectedHex)
+bool Utilities::VerifySha256(const QString& filePath, const QString& expectedHex)
 {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly))
@@ -53,17 +51,17 @@ bool VerifySha256(const QString& filePath, const QString& expectedHex)
     return QString::fromLatin1(hash.result().toHex()) == expectedHex.toLower();
 }
 
-QString StageDirectoryForPlugin(const QString& pluginId)
+QString Utilities::StageDirectoryForPlugin(const QString& pluginId)
 {
     return QDir(CONFIG_DIR).filePath(QString("staging/%1").arg(pluginId));
 }
 
-QString MergedArchivePath()
+QString Utilities::MergedArchivePath()
 {
     return QDir(CONFIG_DIR).filePath("staging/KoboRoot.merged.tgz");
 }
 
-bool ExtractArchive(const QString& archivePath, const QString& outputDir)
+bool Utilities::ExtractArchive(const QString& archivePath, const QString& outputDir)
 {
     QProcess tar;
     QStringList args;
@@ -75,7 +73,7 @@ bool ExtractArchive(const QString& archivePath, const QString& outputDir)
     return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
 }
 
-bool CreateArchive(const QString& sourceDir, const QString& archivePath)
+bool Utilities::CreateArchive(const QString& sourceDir, const QString& archivePath)
 {
     QFile::remove(archivePath);
 
@@ -90,19 +88,19 @@ bool CreateArchive(const QString& sourceDir, const QString& archivePath)
     return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
 }
 
-bool PublishArchive(const QString& archivePath)
+bool Utilities::PublishArchive(const QString& archivePath)
 {
     const auto onboardFilePath = QDir(ONBOARD_DIR).filePath("KoboRoot.tgz");
     QFile::remove(onboardFilePath);
     return QFile::copy(archivePath, onboardFilePath);
 }
 
-bool RebootDevice()
+bool Utilities::RebootDevice()
 {
     return QProcess::startDetached("reboot");
 }
 
-bool EnsureMergeDirectoryReady(const QString& mergeDirPath)
+bool Utilities::EnsureMergeDirectoryReady(const QString& mergeDirPath)
 {
     const auto stagingRootPath = QFileInfo(mergeDirPath).dir().absolutePath();
     QDir stagingRoot(stagingRootPath);
@@ -120,7 +118,6 @@ bool EnsureMergeDirectoryReady(const QString& mergeDirPath)
 
     return true;
 }
-} // namespace
 
 QString Utilities::ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath)
 {
