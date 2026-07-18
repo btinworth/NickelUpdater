@@ -12,24 +12,11 @@ bool UserConfig::Load(const QString& path)
         return false;
     }
 
-    bool inPluginsSection = false;
     while (!file.atEnd())
     {
         const auto rawLine = QString::fromUtf8(file.readLine());
         const auto line = StripComment(rawLine).trimmed();
         if (line.isEmpty())
-        {
-            continue;
-        }
-
-        if (line.startsWith('[') && line.endsWith(']'))
-        {
-            const auto section = line.mid(1, line.size() - 2).trimmed().toLower();
-            inPluginsSection = (section == "plugins");
-            continue;
-        }
-
-        if (!inPluginsSection)
         {
             continue;
         }
@@ -58,14 +45,27 @@ bool UserConfig::Save(const QString& path) const
     }
 
     file.write("# NickelUpdater configuration\n");
-    file.write("[plugins]\n");
     for (const auto& plugin : Plugins)
     {
-        const auto line = QString("%1 = %2\n").arg(plugin.PluginId, plugin.InstalledVersion);
+        const auto line = QString("%1 = %2\n").arg(plugin.PluginId, plugin.TagName);
         file.write(line.toUtf8());
     }
 
     return file.commit();
+}
+
+bool UserConfig::SetTag(const QString& pluginId, const QString& tagName)
+{
+    for (auto& plugin : Plugins)
+    {
+        if (plugin.PluginId == pluginId)
+        {
+            plugin.TagName = tagName;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 const QVector<PluginConfigEntry>& UserConfig::GetPlugins() const

@@ -51,7 +51,13 @@ void NickelUpdater::OnNetworkConnected()
             continue;
         }
 
-        nh_log("NickelUpdater: plugin %s installed=%s", qPrintable(plugin.PluginId), qPrintable(plugin.InstalledVersion));
+        if (!plugin.TagName.isEmpty() && plugin.TagName == release.TagName)
+        {
+            nh_log("NickelUpdater: plugin %s already at %s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
+            continue;
+        }
+
+        nh_log("NickelUpdater: plugin %s installed=%s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
 
         const auto stageDirPath = StageDirectoryForPlugin(plugin.PluginId);
         if (!QDir().mkpath(stageDirPath))
@@ -80,6 +86,18 @@ void NickelUpdater::OnNetworkConnected()
         if (!QFile::copy(stageFilePath, onboardFilePath))
         {
             nh_log("NickelUpdater: failed to publish KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+            continue;
+        }
+
+        if (!config.SetTag(plugin.PluginId, release.TagName) || !config.Save(NICKELUPDATER_CONF))
+        {
+            nh_log("NickelUpdater: failed to update tag for %s", qPrintable(plugin.PluginId));
+            continue;
+        }
+
+        if (!RebootDevice())
+        {
+            nh_log("NickelUpdater: failed to reboot after publishing KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
             continue;
         }
 
@@ -165,4 +183,9 @@ bool NickelUpdater::VerifySha256(const QString& filePath, const QString& expecte
 QString NickelUpdater::StageDirectoryForPlugin(const QString& pluginId)
 {
     return QDir(CONFIG_DIR).filePath(QString("staging/%1").arg(pluginId));
+}
+
+bool NickelUpdater::RebootDevice()
+{
+    return QProcess::startDetached("reboot");
 }

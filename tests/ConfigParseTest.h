@@ -11,6 +11,7 @@ private slots:
     void parsesValidPluginRows();
     void acceptsArbitraryPluginIds();
     void saveWritesDeterministicFormat();
+    void updatesInstalledVersion();
 
 private:
     static UserConfig LoadConfig(const QString& contents);
