@@ -1,5 +1,6 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
+#include "PluginRelease.h"
 #include "UserConfig.h"
 #include <NickelHook.h>
 #include <QDir>
@@ -37,12 +38,21 @@ void NickelUpdater::OnNetworkConnected()
 
     const auto& plugins = config.GetPlugins();
     nh_log("NickelUpdater: found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
+
+    PluginReleaseClient releaseClient;
     for (const auto& plugin : plugins)
     {
-        nh_log(
-            "NickelUpdater: plugin %s installed=%s",
-            qPrintable(plugin.pluginId),
-            qPrintable(plugin.installedVersion));
+        const auto release = releaseClient.GetLatestRelease(plugin.pluginId);
+        if (!release.IsValid())
+        {
+            nh_log("NickelUpdater: failed to load latest release for %s", qPrintable(plugin.pluginId));
+            continue;
+        }
+
+        nh_log("NickelUpdater: plugin %s installed=%s", qPrintable(plugin.pluginId), qPrintable(plugin.installedVersion));
+        nh_log("NickelUpdater: selected release %s for %s", qPrintable(release.tagName), qPrintable(plugin.pluginId));
+        nh_log("NickelUpdater: KoboRoot.tgz asset %s", qPrintable(release.koboRootUrl));
+        nh_log("NickelUpdater: KoboRoot.tgz checksum %s", qPrintable(release.checksum));
     }
 
     nh_log("NickelUpdater: update finished");
