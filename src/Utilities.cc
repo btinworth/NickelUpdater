@@ -24,14 +24,14 @@ QString ExtractSha256Digest(const QString& digest)
 bool DownloadFile(const QString& url, const QString& outputPath)
 {
     QProcess curl;
-    curl.start("curl", QStringList{
-        "-fsSL",
-        "-L",
-        "-H", "User-Agent: NickelUpdater",
-        "-H", "Accept: application/vnd.github+json",
-        "-o", outputPath,
-        url,
-    });
+    QStringList args;
+    args << "-fsSL"
+         << "-L"
+         << "-H" << "User-Agent: NickelUpdater"
+         << "-H" << "Accept: application/vnd.github+json"
+         << "-o" << outputPath
+         << url;
+    curl.start("curl", args);
     return curl.waitForFinished() && curl.exitStatus() == QProcess::NormalExit && curl.exitCode() == 0;
 }
 
@@ -65,12 +65,12 @@ QString MergedArchivePath()
 bool ExtractArchive(const QString& archivePath, const QString& outputDir)
 {
     QProcess tar;
-    tar.start("tar", QStringList{
-        "-xzf",
-        archivePath,
-        "-C",
-        outputDir,
-    });
+    QStringList args;
+    args << "-xzf"
+         << archivePath
+         << "-C"
+         << outputDir;
+    tar.start("tar", args);
     return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
 }
 
@@ -79,13 +79,13 @@ bool CreateArchive(const QString& sourceDir, const QString& archivePath)
     QFile::remove(archivePath);
 
     QProcess tar;
-    tar.start("tar", QStringList{
-        "-czf",
-        archivePath,
-        "-C",
-        sourceDir,
-        ".",
-    });
+    QStringList args;
+    args << "-czf"
+         << archivePath
+         << "-C"
+         << sourceDir
+         << ".";
+    tar.start("tar", args);
     return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
 }
 
@@ -118,7 +118,7 @@ bool EnsureMergeDirectoryReady(const QString& mergeDirPath)
 
     return true;
 }
-}
+} // namespace
 
 QString Utilities::ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath)
 {

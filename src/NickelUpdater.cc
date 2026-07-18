@@ -1,8 +1,8 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
 #include "GitHubInterface.h"
-#include "Utilities.h"
 #include "UserConfig.h"
+#include "Utilities.h"
 #include <NickelHook.h>
 #include <QFileInfo>
 

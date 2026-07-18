@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QString>
 #include "UserConfig.h"
+#include <QString>
 
 class Utilities
 {

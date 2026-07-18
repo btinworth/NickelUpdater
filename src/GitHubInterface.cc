@@ -7,12 +7,12 @@
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
     QProcess curl;
-    curl.start("curl", QStringList{
-        "-fsSL",
-        "-H", "User-Agent: NickelUpdater",
-        "-H", "Accept: application/vnd.github+json",
-        QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId),
-    });
+    QStringList args;
+    args << "-fsSL"
+         << "-H" << "User-Agent: NickelUpdater"
+         << "-H" << "Accept: application/vnd.github+json"
+         << QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId);
+    curl.start("curl", args);
     if (!curl.waitForFinished() || curl.exitStatus() != QProcess::NormalExit || curl.exitCode() != 0)
     {
         return {};
