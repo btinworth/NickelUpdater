@@ -47,76 +47,10 @@ void NickelUpdater::OnNetworkConnected()
     GitHubInterface releaseClient;
     for (const auto& plugin : plugins)
     {
-        const auto release = releaseClient.GetLatestRelease(plugin.PluginId);
-        if (!release.IsValid())
+        if (!ProcessPluginUpdate(config, plugin, releaseClient, mergeDirPath, hasUpdates))
         {
-            nh_log("NickelUpdater: failed to load latest release for %s", qPrintable(plugin.PluginId));
-            continue;
+            return;
         }
-
-        if (!plugin.TagName.isEmpty() && plugin.TagName == release.TagName)
-        {
-            nh_log("NickelUpdater: plugin %s already at %s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
-            continue;
-        }
-
-        nh_log("NickelUpdater: plugin %s installed=%s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
-
-        const auto stageDirPath = StageDirectoryForPlugin(plugin.PluginId);
-        if (!QDir().mkpath(stageDirPath))
-        {
-            nh_log("NickelUpdater: failed to create stage dir for %s", qPrintable(plugin.PluginId));
-            continue;
-        }
-
-        const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
-        if (!DownloadFile(release.KoboRootUrl, stageFilePath))
-        {
-            nh_log("NickelUpdater: failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
-            continue;
-        }
-
-        const auto expectedDigest = ExtractSha256Digest(release.Checksum);
-        if (expectedDigest.isEmpty() || !VerifySha256(stageFilePath, expectedDigest))
-        {
-            nh_log("NickelUpdater: checksum mismatch for %s", qPrintable(plugin.PluginId));
-            QFile::remove(stageFilePath);
-            continue;
-        }
-
-        if (!hasUpdates)
-        {
-            QDir mergeDir(mergeDirPath);
-            if (mergeDir.exists() && !mergeDir.removeRecursively())
-            {
-                nh_log("NickelUpdater: failed to clear merge directory: %s", qPrintable(mergeDirPath));
-                return;
-            }
-
-            if (!QDir().mkpath(mergeDirPath))
-            {
-                nh_log("NickelUpdater: failed to create merge directory: %s", qPrintable(mergeDirPath));
-                return;
-            }
-        }
-
-        if (!ExtractArchive(stageFilePath, mergeDirPath))
-        {
-            nh_log("NickelUpdater: failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
-            continue;
-        }
-
-        if (!config.SetTag(plugin.PluginId, release.TagName))
-        {
-            nh_log("NickelUpdater: failed to update tag for %s", qPrintable(plugin.PluginId));
-            continue;
-        }
-
-        hasUpdates = true;
-
-        nh_log("NickelUpdater: selected release %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
-        nh_log("NickelUpdater: staged KoboRoot.tgz at %s", qPrintable(stageFilePath));
-        nh_log("NickelUpdater: KoboRoot.tgz checksum %s", qPrintable(release.Checksum));
     }
 
     if (!hasUpdates)
@@ -126,32 +60,10 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    if (!config.Save(NICKELUPDATER_CONF))
+    if (!FinalizeAndApplyUpdates(config, mergeDirPath))
     {
-        nh_log("NickelUpdater: failed to save updated tags");
         return;
     }
-
-    const auto mergedArchivePath = MergedArchivePath();
-    if (!CreateArchive(mergeDirPath, mergedArchivePath))
-    {
-        nh_log("NickelUpdater: failed to create merged KoboRoot.tgz");
-        return;
-    }
-
-    if (!PublishArchive(mergedArchivePath))
-    {
-        nh_log("NickelUpdater: failed to publish merged KoboRoot.tgz");
-        return;
-    }
-
-    if (!RebootDevice())
-    {
-        nh_log("NickelUpdater: failed to reboot after publishing merged KoboRoot.tgz");
-        return;
-    }
-
-    nh_log("NickelUpdater: published merged KoboRoot.tgz");
 
     nh_log("NickelUpdater: update finished");
 }
@@ -182,6 +94,124 @@ void NickelUpdater::CreateConfig(const char* filePath, const char* tmplFilePath)
     {
         nh_log("NickelUpdater: failed to create config from template: %s -> %s", tmplFilePath, filePath);
     }
+}
+
+bool NickelUpdater::ProcessPluginUpdate(
+    UserConfig& config,
+    const PluginConfigEntry& plugin,
+    GitHubInterface& releaseClient,
+    const QString& mergeDirPath,
+    bool& hasUpdates)
+{
+    const auto release = releaseClient.GetLatestRelease(plugin.PluginId);
+    if (!release.IsValid())
+    {
+        nh_log("NickelUpdater: failed to load latest release for %s", qPrintable(plugin.PluginId));
+        return true;
+    }
+
+    if (!plugin.TagName.isEmpty() && plugin.TagName == release.TagName)
+    {
+        nh_log("NickelUpdater: plugin %s already at %s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
+        return true;
+    }
+
+    nh_log("NickelUpdater: plugin %s installed=%s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
+
+    const auto stageDirPath = StageDirectoryForPlugin(plugin.PluginId);
+    if (!QDir().mkpath(stageDirPath))
+    {
+        nh_log("NickelUpdater: failed to create stage dir for %s", qPrintable(plugin.PluginId));
+        return true;
+    }
+
+    const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
+    if (!DownloadFile(release.KoboRootUrl, stageFilePath))
+    {
+        nh_log("NickelUpdater: failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+        return true;
+    }
+
+    const auto expectedDigest = ExtractSha256Digest(release.Checksum);
+    if (expectedDigest.isEmpty() || !VerifySha256(stageFilePath, expectedDigest))
+    {
+        nh_log("NickelUpdater: checksum mismatch for %s", qPrintable(plugin.PluginId));
+        QFile::remove(stageFilePath);
+        return true;
+    }
+
+    if (!hasUpdates && !EnsureMergeDirectoryReady(mergeDirPath))
+    {
+        return false;
+    }
+
+    if (!ExtractArchive(stageFilePath, mergeDirPath))
+    {
+        nh_log("NickelUpdater: failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+        return true;
+    }
+
+    if (!config.SetTag(plugin.PluginId, release.TagName))
+    {
+        nh_log("NickelUpdater: failed to update tag for %s", qPrintable(plugin.PluginId));
+        return true;
+    }
+
+    hasUpdates = true;
+
+    nh_log("NickelUpdater: selected release %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
+    nh_log("NickelUpdater: staged KoboRoot.tgz at %s", qPrintable(stageFilePath));
+    nh_log("NickelUpdater: KoboRoot.tgz checksum %s", qPrintable(release.Checksum));
+    return true;
+}
+
+bool NickelUpdater::EnsureMergeDirectoryReady(const QString& mergeDirPath)
+{
+    QDir mergeDir(mergeDirPath);
+    if (mergeDir.exists() && !mergeDir.removeRecursively())
+    {
+        nh_log("NickelUpdater: failed to clear merge directory: %s", qPrintable(mergeDirPath));
+        return false;
+    }
+
+    if (!QDir().mkpath(mergeDirPath))
+    {
+        nh_log("NickelUpdater: failed to create merge directory: %s", qPrintable(mergeDirPath));
+        return false;
+    }
+
+    return true;
+}
+
+bool NickelUpdater::FinalizeAndApplyUpdates(UserConfig& config, const QString& mergeDirPath)
+{
+    if (!config.Save(NICKELUPDATER_CONF))
+    {
+        nh_log("NickelUpdater: failed to save updated tags");
+        return false;
+    }
+
+    const auto mergedArchivePath = MergedArchivePath();
+    if (!CreateArchive(mergeDirPath, mergedArchivePath))
+    {
+        nh_log("NickelUpdater: failed to create merged KoboRoot.tgz");
+        return false;
+    }
+
+    if (!PublishArchive(mergedArchivePath))
+    {
+        nh_log("NickelUpdater: failed to publish merged KoboRoot.tgz");
+        return false;
+    }
+
+    if (!RebootDevice())
+    {
+        nh_log("NickelUpdater: failed to reboot after publishing merged KoboRoot.tgz");
+        return false;
+    }
+
+    nh_log("NickelUpdater: published merged KoboRoot.tgz");
+    return true;
 }
 
 QString NickelUpdater::ExtractSha256Digest(const QString& digest)

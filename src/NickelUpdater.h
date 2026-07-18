@@ -2,6 +2,10 @@
 
 #include <QObject>
 
+class GitHubInterface;
+class UserConfig;
+struct PluginConfigEntry;
+
 extern QObject* (*WirelessManagerInstance)();
 
 class NickelUpdater : public QObject
@@ -16,6 +20,15 @@ public slots:
     void OnNetworkDisconnected();
 
 private:
+    static bool ProcessPluginUpdate(
+        UserConfig& config,
+        const PluginConfigEntry& plugin,
+        GitHubInterface& releaseClient,
+        const QString& mergeDirPath,
+        bool& hasUpdates);
+    static bool EnsureMergeDirectoryReady(const QString& mergeDirPath);
+    static bool FinalizeAndApplyUpdates(UserConfig& config, const QString& mergeDirPath);
+
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
     static QString ExtractSha256Digest(const QString& digest);
     static bool DownloadFile(const QString& url, const QString& outputPath);
