@@ -61,7 +61,7 @@ bool UserConfig::Save(const QString& path) const
     file.write("[plugins]\n");
     for (const auto& plugin : Plugins)
     {
-        const auto line = QString("%1 = %2\n").arg(plugin.pluginId, plugin.installedVersion);
+        const auto line = QString("%1 = %2\n").arg(plugin.PluginId, plugin.InstalledVersion);
         file.write(line.toUtf8());
     }
 

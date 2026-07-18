@@ -5,8 +5,8 @@
 
 struct PluginConfigEntry
 {
-    QString pluginId;
-    QString installedVersion;
+    QString PluginId;
+    QString InstalledVersion;
 };
 
 class UserConfig

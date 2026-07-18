@@ -32,10 +32,10 @@ void ConfigParseTest::parsesValidPluginRows()
 
     const auto& plugins = config.GetPlugins();
     QCOMPARE(plugins.size(), 2);
-    QCOMPARE(plugins.at(0).pluginId, QString("pgaskin/NickelMenu"));
-    QCOMPARE(plugins.at(0).installedVersion, QString("v1.0.0"));
-    QCOMPARE(plugins.at(1).pluginId, QString("bobo/example-plugin"));
-    QCOMPARE(plugins.at(1).installedVersion, QString(""));
+    QCOMPARE(plugins.at(0).PluginId, QString("pgaskin/NickelMenu"));
+    QCOMPARE(plugins.at(0).InstalledVersion, QString("v1.0.0"));
+    QCOMPARE(plugins.at(1).PluginId, QString("bobo/example-plugin"));
+    QCOMPARE(plugins.at(1).InstalledVersion, QString(""));
 }
 
 void ConfigParseTest::acceptsArbitraryPluginIds()
@@ -49,12 +49,12 @@ void ConfigParseTest::acceptsArbitraryPluginIds()
 
     const auto& plugins = config.GetPlugins();
     QCOMPARE(plugins.size(), 3);
-    QCOMPARE(plugins.at(0).pluginId, QString("bad/format/row"));
-    QCOMPARE(plugins.at(0).installedVersion, QString("v1"));
-    QCOMPARE(plugins.at(1).pluginId, QString("good/repo"));
-    QCOMPARE(plugins.at(1).installedVersion, QString("v2"));
-    QCOMPARE(plugins.at(2).pluginId, QString("bad owner/repo"));
-    QCOMPARE(plugins.at(2).installedVersion, QString("v3"));
+    QCOMPARE(plugins.at(0).PluginId, QString("bad/format/row"));
+    QCOMPARE(plugins.at(0).InstalledVersion, QString("v1"));
+    QCOMPARE(plugins.at(1).PluginId, QString("good/repo"));
+    QCOMPARE(plugins.at(1).InstalledVersion, QString("v2"));
+    QCOMPARE(plugins.at(2).PluginId, QString("bad owner/repo"));
+    QCOMPARE(plugins.at(2).InstalledVersion, QString("v3"));
 }
 
 void ConfigParseTest::saveWritesDeterministicFormat()
