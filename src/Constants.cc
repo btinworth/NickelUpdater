@@ -2,15 +2,9 @@
 
 const char* ONBOARD_DIR = "/mnt/onboard";
 
-const char* INSTALL_DIR = "/usr/local/nickelcloud";
-const char* RCLONE_BIN = "/usr/local/nickelcloud/rclone";
-const char* CA_CERT = "/usr/local/nickelcloud/cacert.pem";
-const char* RCLONE_TMPL = "/usr/local/nickelcloud/rclone.conf.tmpl";
-const char* NICKELCLOUD_TMPL = "/usr/local/nickelcloud/nickelcloud.conf.tmpl";
+const char* INSTALL_DIR = "/usr/local/nickelupdater";
+const char* NICKELUPDATER_TMPL = "/usr/local/nickelupdater/nickelupdater.conf.tmpl";
 
-const char* CONFIG_DIR = "/mnt/onboard/.adds/nickelcloud";
-const char* RCLONE_CONF = "/mnt/onboard/.adds/nickelcloud/rclone.conf";
-const char* NICKELCLOUD_CONF = "/mnt/onboard/.adds/nickelcloud/nickelcloud.conf";
-const char* UNINSTALL_FLAG = "/mnt/onboard/.adds/nickelcloud/uninstall";
-
-const char* CACHE_DIR = "/tmp/nickelcloudcache";
+const char* CONFIG_DIR = "/mnt/onboard/.adds/nickelupdater";
+const char* NICKELUPDATER_CONF = "/mnt/onboard/.adds/nickelupdater/nickelupdater.conf";
+const char* UNINSTALL_FLAG = "/mnt/onboard/.adds/nickelupdater/uninstall";

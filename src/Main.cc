@@ -1,54 +1,44 @@
 #include "Constants.h"
-#include "NickelCloud.h"
+#include "NickelUpdater.h"
 #include <NickelHook.h>
 
-static int NickelCloudInit()
+static int NickelUpdaterInit()
 {
     auto* wm = WirelessManagerInstance();
     if (wm == nullptr)
     {
-        nh_log("NickelCloud: could not get WirelessManager instance");
+        nh_log("NickelUpdater: could not get WirelessManager instance");
         return 0;
     }
 
-    static NickelCloud nickelCloud;
-    QObject::connect(wm, SIGNAL(networkConnected()), &nickelCloud, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
-    QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelCloud, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
+    static NickelUpdater nickelUpdater;
+    QObject::connect(wm, SIGNAL(networkConnected()), &nickelUpdater, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
+    QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelUpdater, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
     return 0;
 }
 
-static struct nh_info NickelCloud = {
-    .name = "NickelCloud",
-    .desc = "Pull books from cloud storage into your library using rclone",
+static struct nh_info NickelUpdaterInfo = {
+    .name = "NickelUpdater",
+    .desc = "Auto-update Kobo plugins from GitHub releases",
     .uninstall_flag = UNINSTALL_FLAG,
 };
 
-static struct nh_hook NickelCloudHook[] = {
+static struct nh_hook NickelUpdaterHook[] = {
     {0},
 };
 
-static struct nh_dlsym NickelCloudDlsym[] = {
+static struct nh_dlsym NickelUpdaterDlsym[] = {
     {
         .name = "_ZN15WirelessManager14sharedInstanceEv",
         .out = nh_symoutptr(WirelessManagerInstance),
         .desc = "WirelessManager::sharedInstance",
     },
-    {
-        .name = "_ZN15N3FSSyncManager14sharedInstanceEv",
-        .out = nh_symoutptr(N3FSSyncManagerInstance),
-        .desc = "N3FSSyncManager::sharedInstance",
-    },
-    {
-        .name = "_ZN15N3FSSyncManager4syncERK11QStringList",
-        .out = nh_symoutptr(N3FSSyncManagerSync),
-        .desc = "N3FSSyncManager::sync",
-    },
     {0},
 };
 
 NickelHook(
-    .init = NickelCloudInit,
-    .info = &NickelCloud,
-    .hook = NickelCloudHook,
-    .dlsym = NickelCloudDlsym,
+    .init = NickelUpdaterInit,
+    .info = &NickelUpdaterInfo,
+    .hook = NickelUpdaterHook,
+    .dlsym = NickelUpdaterDlsym,
 )
