@@ -2,7 +2,6 @@
 
 const char* ONBOARD_DIR = "/mnt/onboard";
 
-const char* INSTALL_DIR = "/usr/local/nickelupdater";
 const char* NICKELUPDATER_TMPL = "/usr/local/nickelupdater/nickelupdater.conf.tmpl";
 
 const char* CONFIG_DIR = "/mnt/onboard/.adds/nickelupdater";

@@ -2,7 +2,6 @@
 
 extern const char* ONBOARD_DIR;
 
-extern const char* INSTALL_DIR;
 extern const char* NICKELUPDATER_TMPL;
 
 extern const char* CONFIG_DIR;
