@@ -13,7 +13,6 @@ static int NickelUpdaterInit()
 
     static NickelUpdater nickelUpdater;
     QObject::connect(wm, SIGNAL(networkConnected()), &nickelUpdater, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
-    QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelUpdater, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
     return 0;
 }
 

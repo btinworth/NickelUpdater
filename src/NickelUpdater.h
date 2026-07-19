@@ -13,5 +13,4 @@ public:
 
 public slots:
     void OnNetworkConnected();
-    void OnNetworkDisconnected();
 };

@@ -4,7 +4,6 @@
 #include "UserConfig.h"
 #include "Utilities.h"
 #include <NickelHook.h>
-#include <QFileInfo>
 
 QObject* (*WirelessManagerInstance)() = nullptr;
 
@@ -15,21 +14,12 @@ NickelUpdater::NickelUpdater()
 
 void NickelUpdater::OnNetworkConnected()
 {
-    nh_log("WiFi connected");
-
-    QFileInfo configFile(NICKELUPDATER_CONF);
-    if (!configFile.exists())
-    {
-        nh_log("Config does not exist: %s", NICKELUPDATER_CONF);
-        return;
-    }
-
     nh_log("Starting update");
 
     UserConfig config;
     if (!config.Load(NICKELUPDATER_CONF))
     {
-        nh_log("Failed to parse config");
+        nh_log("Failed to open config: %s", NICKELUPDATER_CONF);
         return;
     }
 
@@ -69,9 +59,4 @@ void NickelUpdater::OnNetworkConnected()
     }
 
     nh_log("Update finished");
-}
-
-void NickelUpdater::OnNetworkDisconnected()
-{
-    nh_log("WiFi disconnected");
 }
