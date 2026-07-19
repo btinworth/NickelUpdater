@@ -23,10 +23,8 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    nh_log("Config loaded from %s", NICKELUPDATER_CONF);
-
     const auto& plugins = config.GetPlugins();
-    nh_log("Found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
+    nh_log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(plugins.size()));
 
     const auto mergeDirPath = Utilities::MergeDirectoryPath();
     if (!Utilities::PrepareMergeDirectory(mergeDirPath))

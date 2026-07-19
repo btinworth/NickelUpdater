@@ -22,10 +22,6 @@ static struct nh_info NickelUpdaterInfo = {
     .uninstall_flag = UNINSTALL_FLAG,
 };
 
-static struct nh_hook NickelUpdaterHook[] = {
-    {0},
-};
-
 static struct nh_dlsym NickelUpdaterDlsym[] = {
     {
         .name = "_ZN15WirelessManager14sharedInstanceEv",
@@ -38,6 +34,6 @@ static struct nh_dlsym NickelUpdaterDlsym[] = {
 NickelHook(
     .init = NickelUpdaterInit,
     .info = &NickelUpdaterInfo,
-    .hook = NickelUpdaterHook,
+    .hook = nullptr,
     .dlsym = NickelUpdaterDlsym,
 )
