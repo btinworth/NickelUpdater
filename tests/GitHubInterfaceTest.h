@@ -1,0 +1,30 @@
+#pragma once
+
+#include <QByteArray>
+#include <QObject>
+#include <QString>
+
+class GitHubInterfaceTest : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void init();
+    void cleanup();
+
+    void returnsInvalidWhenCurlFails();
+    void returnsInvalidWhenResponseIsNotJson();
+    void returnsInvalidWhenTagNameMissing();
+    void returnsInvalidWhenTagNameEmpty();
+    void returnsInvalidWhenAssetsArrayMissing();
+    void returnsInvalidWhenNoKoboRootAsset();
+    void returnsValidReleaseForWellFormedResponse();
+    void selectsKoboRootUrlWhenMultipleAssets();
+
+private:
+    void WriteFakeCurlScript(int exitCode, const QByteArray& response) const;
+
+    QString TempRoot;
+    QString BinDir;
+    QByteArray OriginalPath;
+};

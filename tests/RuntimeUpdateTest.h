@@ -14,6 +14,10 @@ private slots:
 
     void batchesMultipleUpdatesIntoSingleFinalize();
     void noEffectiveChangeDoesNotFinalize();
+    void singlePluginUpdate();
+    void partialFailureStillFinalizes();
+    void allPluginsFailDoesNotFinalize();
+    void configMissingIsCreatedFromTemplate();
 
 private:
     QString CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const;

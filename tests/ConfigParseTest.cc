@@ -92,3 +92,62 @@ void ConfigParseTest::updatesInstalledVersion()
     QCOMPARE(plugins.at(1).TagName, QString("v2.0.0"));
     QVERIFY(!config.SetTag("missing/repo", "v1"));
 }
+
+void ConfigParseTest::loadReturnsFalseForMissingFile()
+{
+    UserConfig config;
+    QVERIFY(!config.Load("/nonexistent/path/that/does/not/exist.conf"));
+    QCOMPARE(config.GetPlugins().size(), 0);
+}
+
+void ConfigParseTest::loadEmptyFileReturnsNoPlugins()
+{
+    const auto config = LoadConfig("");
+    QCOMPARE(config.GetPlugins().size(), 0);
+}
+
+void ConfigParseTest::skipsCommentAndBlankLines()
+{
+    const auto config = LoadConfig(
+        "# This is a comment\n"
+        "\n"
+        "owner/plugin-a = v1\n"
+        "   \n"
+        "# another comment\n"
+        "owner/plugin-b = v2\n");
+
+    const auto& plugins = config.GetPlugins();
+    QCOMPARE(plugins.size(), 2);
+    QCOMPARE(plugins.at(0).PluginId, QString("owner/plugin-a"));
+    QCOMPARE(plugins.at(1).PluginId, QString("owner/plugin-b"));
+}
+
+void ConfigParseTest::stripsInlineComments()
+{
+    const auto config = LoadConfig(
+        "owner/plugin-a = v1.0.0 # installed last Tuesday\n"
+        "owner/plugin-b = v2 #nospace\n");
+
+    const auto& plugins = config.GetPlugins();
+    QCOMPARE(plugins.size(), 2);
+    QCOMPARE(plugins.at(0).TagName, QString("v1.0.0"));
+    QCOMPARE(plugins.at(1).TagName, QString("v2"));
+}
+
+void ConfigParseTest::duplicatePluginIdsAreBothRetained()
+{
+    const auto config = LoadConfig(
+        "owner/plugin = v1\n"
+        "owner/plugin = v2\n");
+
+    const auto& plugins = config.GetPlugins();
+    QCOMPARE(plugins.size(), 2);
+    QCOMPARE(plugins.at(0).TagName, QString("v1"));
+    QCOMPARE(plugins.at(1).TagName, QString("v2"));
+}
+
+void ConfigParseTest::saveReturnsFalseForUnwritablePath()
+{
+    const auto config = LoadConfig("owner/plugin = v1\n");
+    QVERIFY(!config.Save("/nonexistent/directory/that/does/not/exist/output.conf"));
+}

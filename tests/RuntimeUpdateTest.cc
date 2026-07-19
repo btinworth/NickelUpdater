@@ -252,3 +252,74 @@ void RuntimeUpdateTest::noEffectiveChangeDoesNotFinalize()
     QCOMPARE(ReadFile(ConfigPath), initialConfig);
     QVERIFY(!QFile::exists(QDir(OnboardDir).filePath("KoboRoot.tgz")));
 }
+
+void RuntimeUpdateTest::singlePluginUpdate()
+{
+    const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
+    QVERIFY(!pluginAArchive.isEmpty());
+    qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
+    qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
+
+    WriteConfig("owner/plugin-a = v1\n");
+
+    NickelUpdater updater;
+    updater.OnNetworkConnected();
+
+    const auto savedConfig = ReadFile(ConfigPath);
+    QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
+
+    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
+    QVERIFY(QFile::exists(onboardArchive));
+    const auto members = TarList(onboardArchive);
+    QVERIFY(members.contains("./plugin-a/a.txt"));
+}
+
+void RuntimeUpdateTest::partialFailureStillFinalizes()
+{
+    // plugin-a is known to the fake curl; owner/unknown-plugin has no entry in the fake curl
+    // script so its GitHub API call exits 1 — it fails but plugin-a should still succeed.
+    const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
+    QVERIFY(!pluginAArchive.isEmpty());
+    qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
+    qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
+
+    WriteConfig(
+        "owner/plugin-a = v1\n"
+        "owner/unknown-plugin = v1\n");
+
+    NickelUpdater updater;
+    updater.OnNetworkConnected();
+
+    const auto savedConfig = ReadFile(ConfigPath);
+    QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
+    QVERIFY(savedConfig.contains("owner/unknown-plugin = v1\n"));
+
+    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
+    QVERIFY(QFile::exists(onboardArchive));
+    const auto members = TarList(onboardArchive);
+    QVERIFY(members.contains("./plugin-a/a.txt"));
+}
+
+void RuntimeUpdateTest::allPluginsFailDoesNotFinalize()
+{
+    // Neither plugin has a fake curl entry, so all GitHub API calls exit 1.
+    WriteConfig(
+        "owner/unknown-plugin-x = v1\n"
+        "owner/unknown-plugin-y = v1\n");
+
+    NickelUpdater updater;
+    updater.OnNetworkConnected();
+
+    QVERIFY(!QFile::exists(QDir(OnboardDir).filePath("KoboRoot.tgz")));
+}
+
+void RuntimeUpdateTest::configMissingIsCreatedFromTemplate()
+{
+    // The init() fixture does not write a config file; only the template exists.
+    QVERIFY(!QFile::exists(ConfigPath));
+
+    NickelUpdater updater;
+
+    QVERIFY(QFile::exists(ConfigPath));
+    QCOMPARE(ReadFile(ConfigPath), QString("# template\n"));
+}
