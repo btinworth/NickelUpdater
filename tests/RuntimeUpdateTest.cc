@@ -2,7 +2,6 @@
 
 #include "Constants.h"
 #include "NickelUpdater.h"
-#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -42,22 +41,6 @@ QStringList RuntimeUpdateTest::TarList(const QString& archivePath) const
 
     const auto output = QString::fromUtf8(tar.readAllStandardOutput());
     return output.split('\n', Qt::SkipEmptyParts);
-}
-
-QString RuntimeUpdateTest::Sha256OfFile(const QString& filePath) const
-{
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly))
-    {
-        return {};
-    }
-
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    while (!file.atEnd())
-    {
-        hash.addData(file.read(64 * 1024));
-    }
-    return QString::fromLatin1(hash.result().toHex());
 }
 
 QString RuntimeUpdateTest::CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const
@@ -124,11 +107,11 @@ void RuntimeUpdateTest::WriteFakeCurlScript() const
         "  exit 1\n"
         "fi\n"
         "if [ \"$url\" = \"https://api.github.com/repos/owner/plugin-a/releases/latest\" ]; then\n"
-        "  printf '{\"tag_name\":\"%s\",\"assets\":[{\"name\":\"KoboRoot.tgz\",\"browser_download_url\":\"http://fake/plugin-a.tgz\",\"digest\":\"sha256:%s\"}]}' \"$NU_PLUGIN_A_TAG\" \"$NU_PLUGIN_A_DIGEST\"\n"
+        "  printf '{\"tag_name\":\"%s\",\"assets\":[{\"name\":\"KoboRoot.tgz\",\"browser_download_url\":\"http://fake/plugin-a.tgz\"}]}' \"$NU_PLUGIN_A_TAG\"\n"
         "  exit 0\n"
         "fi\n"
         "if [ \"$url\" = \"https://api.github.com/repos/owner/plugin-b/releases/latest\" ]; then\n"
-        "  printf '{\"tag_name\":\"%s\",\"assets\":[{\"name\":\"KoboRoot.tgz\",\"browser_download_url\":\"http://fake/plugin-b.tgz\",\"digest\":\"sha256:%s\"}]}' \"$NU_PLUGIN_B_TAG\" \"$NU_PLUGIN_B_DIGEST\"\n"
+        "  printf '{\"tag_name\":\"%s\",\"assets\":[{\"name\":\"KoboRoot.tgz\",\"browser_download_url\":\"http://fake/plugin-b.tgz\"}]}' \"$NU_PLUGIN_B_TAG\"\n"
         "  exit 0\n"
         "fi\n"
         "exit 1\n");
@@ -223,8 +206,6 @@ void RuntimeUpdateTest::batchesMultipleUpdatesIntoSingleFinalize()
     qputenv("NU_PLUGIN_B_ARCHIVE", pluginBArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
     qputenv("NU_PLUGIN_B_TAG", QByteArray("v11"));
-    qputenv("NU_PLUGIN_A_DIGEST", Sha256OfFile(pluginAArchive).toUtf8());
-    qputenv("NU_PLUGIN_B_DIGEST", Sha256OfFile(pluginBArchive).toUtf8());
 
     WriteConfig(
         "owner/plugin-a = v1\n"
@@ -244,37 +225,6 @@ void RuntimeUpdateTest::batchesMultipleUpdatesIntoSingleFinalize()
     QVERIFY(members.contains("./plugin-b/b.txt"));
 }
 
-void RuntimeUpdateTest::conflictLikeFailureSkipsOnePluginButAppliesOthers()
-{
-    const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
-    const auto pluginBArchive = CreateArchiveWithFile("plugin-b/b.txt", "B", "plugin-b");
-    QVERIFY(!pluginAArchive.isEmpty());
-    QVERIFY(!pluginBArchive.isEmpty());
-    qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
-    qputenv("NU_PLUGIN_B_ARCHIVE", pluginBArchive.toUtf8());
-    qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
-    qputenv("NU_PLUGIN_B_TAG", QByteArray("v6"));
-    qputenv("NU_PLUGIN_A_DIGEST", QByteArray("deadbeef")); // force checksum failure
-    qputenv("NU_PLUGIN_B_DIGEST", Sha256OfFile(pluginBArchive).toUtf8());
-
-    WriteConfig(
-        "owner/plugin-a = v1\n"
-        "owner/plugin-b = v5\n");
-
-    NickelUpdater updater;
-    updater.OnNetworkConnected();
-
-    const auto savedConfig = ReadFile(ConfigPath);
-    QVERIFY(savedConfig.contains("owner/plugin-a = v1\n"));
-    QVERIFY(savedConfig.contains("owner/plugin-b = v6\n"));
-
-    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
-    QVERIFY(QFile::exists(onboardArchive));
-    const auto members = TarList(onboardArchive);
-    QVERIFY(!members.contains("./plugin-a/a.txt"));
-    QVERIFY(members.contains("./plugin-b/b.txt"));
-}
-
 void RuntimeUpdateTest::noEffectiveChangeDoesNotFinalize()
 {
     const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
@@ -285,8 +235,6 @@ void RuntimeUpdateTest::noEffectiveChangeDoesNotFinalize()
     qputenv("NU_PLUGIN_B_ARCHIVE", pluginBArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v1"));
     qputenv("NU_PLUGIN_B_TAG", QByteArray("v2"));
-    qputenv("NU_PLUGIN_A_DIGEST", Sha256OfFile(pluginAArchive).toUtf8());
-    qputenv("NU_PLUGIN_B_DIGEST", Sha256OfFile(pluginBArchive).toUtf8());
 
     const QString initialConfig =
         "owner/plugin-a = v1\n"

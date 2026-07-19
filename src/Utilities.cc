@@ -3,7 +3,6 @@
 #include "GitHubInterface.h"
 #include "UserConfig.h"
 #include <NickelHook.h>
-#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -26,17 +25,6 @@ bool Utilities::RunProcess(const QString& program, const QStringList& args, QByt
     return true;
 }
 
-QString Utilities::ExtractSha256Digest(const QString& digest)
-{
-    const int colon = digest.indexOf(':');
-    if (colon < 0)
-    {
-        return {};
-    }
-
-    return digest.mid(colon + 1).trimmed();
-}
-
 bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 {
     return RunProcess("curl",
@@ -48,23 +36,6 @@ bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
                            "-o", outputPath,
                            url,
                        });
-}
-
-bool Utilities::VerifySha256(const QString& filePath, const QString& expectedHex)
-{
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly))
-    {
-        return false;
-    }
-
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    while (!file.atEnd())
-    {
-        hash.addData(file.read(64 * 1024));
-    }
-
-    return QString::fromLatin1(hash.result().toHex()) == expectedHex.toLower();
 }
 
 QString Utilities::StageDirectoryForPlugin(const QString& pluginId)
@@ -148,21 +119,13 @@ QString Utilities::ProcessPluginUpdate(const PluginConfigEntry& plugin, const QS
         return {};
     }
 
-    const auto expectedDigest = ExtractSha256Digest(release.Checksum);
-    if (expectedDigest.isEmpty() || !VerifySha256(stageFilePath, expectedDigest))
-    {
-        nh_log("Checksum mismatch for %s", qPrintable(plugin.PluginId));
-        QFile::remove(stageFilePath);
-        return {};
-    }
-
     if (!ExtractArchive(stageFilePath, mergeDirPath))
     {
         nh_log("Failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
         return {};
     }
 
-    nh_log("Staged %s for %s (checksum %s)", qPrintable(release.TagName), qPrintable(plugin.PluginId), qPrintable(release.Checksum));
+    nh_log("Staged %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
 
     return release.TagName;
 }

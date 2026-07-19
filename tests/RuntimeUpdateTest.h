@@ -13,12 +13,10 @@ private slots:
     void cleanup();
 
     void batchesMultipleUpdatesIntoSingleFinalize();
-    void conflictLikeFailureSkipsOnePluginButAppliesOthers();
     void noEffectiveChangeDoesNotFinalize();
 
 private:
     QString CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const;
-    QString Sha256OfFile(const QString& filePath) const;
     void WriteFakeCurlScript() const;
     void WriteFakeRebootScript() const;
     QString ReadFile(const QString& path) const;

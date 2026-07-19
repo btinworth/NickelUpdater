@@ -50,7 +50,6 @@ PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 
         PluginRelease release;
         release.KoboRootUrl = assetObject.value("browser_download_url").toString();
-        release.Checksum = assetObject.value("digest").toString();
         release.TagName = tagName;
         return release;
     }

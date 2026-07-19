@@ -20,9 +20,7 @@ public:
     static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
 
 private:
-    static QString ExtractSha256Digest(const QString& digest);
     static bool DownloadFile(const QString& url, const QString& outputPath);
-    static bool VerifySha256(const QString& filePath, const QString& expectedHex);
     static QString StageDirectoryForPlugin(const QString& pluginId);
     static QString MergedArchivePath();
     static bool ExtractArchive(const QString& archivePath, const QString& outputDir);
