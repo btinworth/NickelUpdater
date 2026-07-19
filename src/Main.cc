@@ -7,7 +7,7 @@ static int NickelUpdaterInit()
     auto* wm = WirelessManagerInstance();
     if (wm == nullptr)
     {
-        nh_log("NickelUpdater: could not get WirelessManager instance");
+        nh_log("Could not get WirelessManager instance");
         return 0;
     }
 

@@ -15,28 +15,28 @@ NickelUpdater::NickelUpdater()
 
 void NickelUpdater::OnNetworkConnected()
 {
-    nh_log("NickelUpdater: WiFi connected");
+    nh_log("WiFi connected");
 
     QFileInfo configFile(NICKELUPDATER_CONF);
     if (!configFile.exists())
     {
-        nh_log("NickelUpdater: config does not exist: %s", NICKELUPDATER_CONF);
+        nh_log("Config does not exist: %s", NICKELUPDATER_CONF);
         return;
     }
 
-    nh_log("NickelUpdater: starting update");
-
-    nh_log("NickelUpdater: config loaded from %s", NICKELUPDATER_CONF);
+    nh_log("Starting update");
 
     UserConfig config;
     if (!config.Load(NICKELUPDATER_CONF))
     {
-        nh_log("NickelUpdater: failed to parse config");
+        nh_log("Failed to parse config");
         return;
     }
 
+    nh_log("Config loaded from %s", NICKELUPDATER_CONF);
+
     const auto& plugins = config.GetPlugins();
-    nh_log("NickelUpdater: found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
+    nh_log("Found %lld plugin(s) in config", static_cast<long long>(plugins.size()));
 
     const auto mergeDirPath = Utilities::MergeDirectoryPath();
     if (!Utilities::PrepareMergeDirectory(mergeDirPath))
@@ -53,19 +53,13 @@ void NickelUpdater::OnNetworkConnected()
             continue;
         }
 
-        if (!config.SetTag(plugin.PluginId, tagName))
-        {
-            nh_log("NickelUpdater: failed to update tag for %s", qPrintable(plugin.PluginId));
-            return;
-        }
-
+        config.SetTag(plugin.PluginId, tagName);
         hasUpdates = true;
     }
 
     if (!hasUpdates)
     {
-        nh_log("NickelUpdater: no updates to apply");
-        nh_log("NickelUpdater: update finished");
+        nh_log("No updates to apply");
         return;
     }
 
@@ -74,10 +68,10 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    nh_log("NickelUpdater: update finished");
+    nh_log("Update finished");
 }
 
 void NickelUpdater::OnNetworkDisconnected()
 {
-    nh_log("NickelUpdater: WiFi disconnected");
+    nh_log("WiFi disconnected");
 }
