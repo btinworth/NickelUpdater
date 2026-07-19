@@ -8,7 +8,9 @@
 class Utilities
 {
 public:
-    static QString ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
+    // Downloads and stages any available update for each configured plugin, updating `config`'s
+    // tags as it goes. Returns true if at least one plugin was updated.
+    static bool ApplyPluginUpdates(UserConfig& config, const QString& mergeDirPath);
 
     static bool FinalizeAndApplyUpdates(const UserConfig& config, const QString& mergeDirPath);
     static bool PrepareMergeDirectory(const QString& mergeDirPath);
@@ -20,6 +22,7 @@ public:
     static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
 
 private:
+    static QString ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
     static bool DownloadFile(const QString& url, const QString& outputPath);
     static QString StageDirectoryForPlugin(const QString& pluginId);
     static QString MergedArchivePath();

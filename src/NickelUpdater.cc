@@ -23,8 +23,7 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    const auto& plugins = config.GetPlugins();
-    nh_log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(plugins.size()));
+    nh_log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(config.GetPlugins().size()));
 
     const auto mergeDirPath = Utilities::MergeDirectoryPath();
     if (!Utilities::PrepareMergeDirectory(mergeDirPath))
@@ -32,20 +31,7 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    bool hasUpdates = false;
-    for (const auto& plugin : plugins)
-    {
-        const auto tagName = Utilities::ProcessPluginUpdate(plugin, mergeDirPath);
-        if (tagName.isEmpty())
-        {
-            continue;
-        }
-
-        config.SetTag(plugin.PluginId, tagName);
-        hasUpdates = true;
-    }
-
-    if (!hasUpdates)
+    if (!Utilities::ApplyPluginUpdates(config, mergeDirPath))
     {
         nh_log("No updates to apply");
         return;

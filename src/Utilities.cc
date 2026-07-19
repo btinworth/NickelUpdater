@@ -5,7 +5,6 @@
 #include <NickelHook.h>
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
 #include <QProcess>
 
 bool Utilities::RunProcess(const QString& program, const QStringList& args, QByteArray* output)
@@ -73,11 +72,10 @@ bool Utilities::RebootDevice()
 
 bool Utilities::PrepareMergeDirectory(const QString& mergeDirPath)
 {
-    const auto stagingRootPath = QFileInfo(mergeDirPath).dir().absolutePath();
-    QDir stagingRoot(stagingRootPath);
+    QDir stagingRoot(STAGING_DIR);
     if (stagingRoot.exists() && !stagingRoot.removeRecursively())
     {
-        nh_log("Failed to clear staging directory: %s", qPrintable(stagingRootPath));
+        nh_log("Failed to clear staging directory: %s", STAGING_DIR);
         return false;
     }
 
@@ -128,6 +126,24 @@ QString Utilities::ProcessPluginUpdate(const PluginConfigEntry& plugin, const QS
     nh_log("Staged %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
 
     return release.TagName;
+}
+
+bool Utilities::ApplyPluginUpdates(UserConfig& config, const QString& mergeDirPath)
+{
+    bool hasUpdates = false;
+    for (const auto& plugin : config.GetPlugins())
+    {
+        const auto tagName = ProcessPluginUpdate(plugin, mergeDirPath);
+        if (tagName.isEmpty())
+        {
+            continue;
+        }
+
+        config.SetTag(plugin.PluginId, tagName);
+        hasUpdates = true;
+    }
+
+    return hasUpdates;
 }
 
 bool Utilities::FinalizeAndApplyUpdates(const UserConfig& config, const QString& mergeDirPath)
