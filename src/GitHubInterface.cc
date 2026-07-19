@@ -1,24 +1,26 @@
 #include "GitHubInterface.h"
+#include "Utilities.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QProcess>
 
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
-    QProcess curl;
-    QStringList args;
-    args << "-fsSL"
-         << "-H" << "User-Agent: NickelUpdater"
-         << "-H" << "Accept: application/vnd.github+json"
-         << QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId);
-    curl.start("curl", args);
-    if (!curl.waitForFinished() || curl.exitStatus() != QProcess::NormalExit || curl.exitCode() != 0)
+    QByteArray output;
+    const bool ok = Utilities::RunProcess("curl",
+                                           {
+                                               "-fsSL",
+                                               "-H", "User-Agent: NickelUpdater",
+                                               "-H", "Accept: application/vnd.github+json",
+                                               QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId),
+                                           },
+                                           &output);
+    if (!ok)
     {
         return {};
     }
 
-    const auto document = QJsonDocument::fromJson(curl.readAllStandardOutput());
+    const auto document = QJsonDocument::fromJson(output);
     if (!document.isObject())
     {
         return {};

@@ -9,6 +9,23 @@
 #include <QFileInfo>
 #include <QProcess>
 
+bool Utilities::RunProcess(const QString& program, const QStringList& args, QByteArray* output)
+{
+    QProcess process;
+    process.start(program, args);
+    if (!process.waitForFinished() || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    {
+        return false;
+    }
+
+    if (output != nullptr)
+    {
+        *output = process.readAllStandardOutput();
+    }
+
+    return true;
+}
+
 QString Utilities::ExtractSha256Digest(const QString& digest)
 {
     const int colon = digest.indexOf(':');
@@ -22,16 +39,15 @@ QString Utilities::ExtractSha256Digest(const QString& digest)
 
 bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 {
-    QProcess curl;
-    QStringList args;
-    args << "-fsSL"
-         << "-L"
-         << "-H" << "User-Agent: NickelUpdater"
-         << "-H" << "Accept: application/vnd.github+json"
-         << "-o" << outputPath
-         << url;
-    curl.start("curl", args);
-    return curl.waitForFinished() && curl.exitStatus() == QProcess::NormalExit && curl.exitCode() == 0;
+    return RunProcess("curl",
+                       {
+                           "-fsSL",
+                           "-L",
+                           "-H", "User-Agent: NickelUpdater",
+                           "-H", "Accept: application/vnd.github+json",
+                           "-o", outputPath,
+                           url,
+                       });
 }
 
 bool Utilities::VerifySha256(const QString& filePath, const QString& expectedHex)
@@ -63,29 +79,13 @@ QString Utilities::MergedArchivePath()
 
 bool Utilities::ExtractArchive(const QString& archivePath, const QString& outputDir)
 {
-    QProcess tar;
-    QStringList args;
-    args << "-xzf"
-         << archivePath
-         << "-C"
-         << outputDir;
-    tar.start("tar", args);
-    return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
+    return RunProcess("tar", {"-xzf", archivePath, "-C", outputDir});
 }
 
 bool Utilities::CreateArchive(const QString& sourceDir, const QString& archivePath)
 {
     QFile::remove(archivePath);
-
-    QProcess tar;
-    QStringList args;
-    args << "-czf"
-         << archivePath
-         << "-C"
-         << sourceDir
-         << ".";
-    tar.start("tar", args);
-    return tar.waitForFinished() && tar.exitStatus() == QProcess::NormalExit && tar.exitCode() == 0;
+    return RunProcess("tar", {"-czf", archivePath, "-C", sourceDir, "."});
 }
 
 bool Utilities::PublishArchive(const QString& archivePath)
@@ -100,7 +100,7 @@ bool Utilities::RebootDevice()
     return QProcess::startDetached("reboot");
 }
 
-bool Utilities::EnsureMergeDirectoryReady(const QString& mergeDirPath)
+bool Utilities::PrepareMergeDirectory(const QString& mergeDirPath)
 {
     const auto stagingRootPath = QFileInfo(mergeDirPath).dir().absolutePath();
     QDir stagingRoot(stagingRootPath);
@@ -200,11 +200,6 @@ bool Utilities::FinalizeAndApplyUpdates(const UserConfig& config, const QString&
 
     nh_log("NickelUpdater: published merged KoboRoot.tgz");
     return true;
-}
-
-bool Utilities::PrepareMergeDirectory(const QString& mergeDirPath)
-{
-    return EnsureMergeDirectoryReady(mergeDirPath);
 }
 
 void Utilities::CreateConfig(const char* filePath, const char* tmplFilePath)

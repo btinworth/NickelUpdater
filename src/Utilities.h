@@ -1,9 +1,9 @@
 #pragma once
 
 #include "UserConfig.h"
+#include <QByteArray>
 #include <QString>
-
-class RuntimeUpdateTest;
+#include <QStringList>
 
 class Utilities
 {
@@ -16,9 +16,10 @@ public:
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
     static QString MergeDirectoryPath();
 
-private:
-    friend class RuntimeUpdateTest;
+    // Runs `program` with `args` to completion; on success, captures stdout in `output` if given.
+    static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
 
+private:
     static QString ExtractSha256Digest(const QString& digest);
     static bool DownloadFile(const QString& url, const QString& outputPath);
     static bool VerifySha256(const QString& filePath, const QString& expectedHex);
@@ -28,5 +29,4 @@ private:
     static bool CreateArchive(const QString& sourceDir, const QString& archivePath);
     static bool PublishArchive(const QString& archivePath);
     static bool RebootDevice();
-    static bool EnsureMergeDirectoryReady(const QString& mergeDirPath);
 };
