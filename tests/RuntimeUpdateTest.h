@@ -29,15 +29,18 @@ private:
     QString OnboardDir;
     QString ConfigPath;
     QString TemplatePath;
+    QString StagingDir;
 
     QByteArray OnboardDirBytes;
     QByteArray ConfigDirBytes;
     QByteArray ConfigPathBytes;
     QByteArray TemplatePathBytes;
+    QByteArray StagingDirBytes;
     QByteArray OriginalPath;
 
     const char* OriginalOnboardDir = nullptr;
     const char* OriginalConfigDir = nullptr;
     const char* OriginalConfigPath = nullptr;
     const char* OriginalTemplatePath = nullptr;
+    const char* OriginalStagingDir = nullptr;
 };

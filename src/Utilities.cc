@@ -40,12 +40,12 @@ bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 
 QString Utilities::StageDirectoryForPlugin(const QString& pluginId)
 {
-    return QDir(CONFIG_DIR).filePath(QString("staging/%1").arg(pluginId));
+    return QDir(STAGING_DIR).filePath(pluginId);
 }
 
 QString Utilities::MergedArchivePath()
 {
-    return QDir(CONFIG_DIR).filePath("staging/KoboRoot.merged.tgz");
+    return QDir(STAGING_DIR).filePath("KoboRoot.merged.tgz");
 }
 
 bool Utilities::ExtractArchive(const QString& archivePath, const QString& outputDir)
@@ -186,5 +186,5 @@ void Utilities::CreateConfig(const char* filePath, const char* tmplFilePath)
 
 QString Utilities::MergeDirectoryPath()
 {
-    return QDir(CONFIG_DIR).filePath("staging/_merged_root");
+    return QDir(STAGING_DIR).filePath("_merged_root");
 }

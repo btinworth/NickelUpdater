@@ -149,6 +149,7 @@ void RuntimeUpdateTest::init()
     OriginalConfigDir = CONFIG_DIR;
     OriginalConfigPath = NICKELUPDATER_CONF;
     OriginalTemplatePath = NICKELUPDATER_TMPL;
+    OriginalStagingDir = STAGING_DIR;
 
     TempRoot = QDir::temp().filePath(QString("nickelupdater-runtime-test-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
     BinDir = QDir(TempRoot).filePath("bin");
@@ -156,6 +157,7 @@ void RuntimeUpdateTest::init()
     OnboardDir = QDir(TempRoot).filePath("onboard");
     ConfigPath = QDir(TempRoot).filePath("nickelupdater.conf");
     TemplatePath = QDir(TempRoot).filePath("nickelupdater.conf.tmpl");
+    StagingDir = QDir(TempRoot).filePath("staging");
 
     QVERIFY(QDir().mkpath(BinDir));
     QVERIFY(QDir().mkpath(DataDir));
@@ -166,6 +168,7 @@ void RuntimeUpdateTest::init()
     ConfigDirBytes = TempRoot.toUtf8();
     ConfigPathBytes = ConfigPath.toUtf8();
     TemplatePathBytes = TemplatePath.toUtf8();
+    StagingDirBytes = StagingDir.toUtf8();
 
     OriginalPath = qgetenv("PATH");
     const auto testPath = BinDir.toUtf8() + ":" + OriginalPath;
@@ -175,6 +178,7 @@ void RuntimeUpdateTest::init()
     CONFIG_DIR = ConfigDirBytes.constData();
     NICKELUPDATER_CONF = ConfigPathBytes.constData();
     NICKELUPDATER_TMPL = TemplatePathBytes.constData();
+    STAGING_DIR = StagingDirBytes.constData();
 
     QFile templateFile(TemplatePath);
     QVERIFY(templateFile.open(QIODevice::WriteOnly | QIODevice::Text));
@@ -191,6 +195,7 @@ void RuntimeUpdateTest::cleanup()
     CONFIG_DIR = OriginalConfigDir;
     NICKELUPDATER_CONF = OriginalConfigPath;
     NICKELUPDATER_TMPL = OriginalTemplatePath;
+    STAGING_DIR = OriginalStagingDir;
     qputenv("PATH", OriginalPath);
 
     QDir(TempRoot).removeRecursively();
