@@ -22,7 +22,7 @@ void GitHubInterfaceTest::cleanup()
     QDir(TempRoot).removeRecursively();
 }
 
-void GitHubInterfaceTest::WriteFakeCurlScript(int exitCode, const QByteArray& response) const
+void GitHubInterfaceTest::WriteFakeWgetScript(int exitCode, const QByteArray& response) const
 {
     // Write the response to a file to avoid any shell-escaping concerns
     const auto responsePath = QDir(TempRoot).filePath("response.json");
@@ -31,7 +31,7 @@ void GitHubInterfaceTest::WriteFakeCurlScript(int exitCode, const QByteArray& re
     responseFile.write(response);
     responseFile.close();
 
-    const auto scriptPath = QDir(BinDir).filePath("curl");
+    const auto scriptPath = QDir(BinDir).filePath("wget");
     QFile script(scriptPath);
     QVERIFY(script.open(QIODevice::WriteOnly | QIODevice::Text));
     script.write(QString(
@@ -49,48 +49,48 @@ void GitHubInterfaceTest::WriteFakeCurlScript(int exitCode, const QByteArray& re
         QFile::ReadOther | QFile::ExeOther);
 }
 
-void GitHubInterfaceTest::returnsInvalidWhenCurlFails()
+void GitHubInterfaceTest::returnsInvalidWhenWgetFails()
 {
-    WriteFakeCurlScript(1, "");
+    WriteFakeWgetScript(1, "");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsInvalidWhenResponseIsNotJson()
 {
-    WriteFakeCurlScript(0, "not json at all");
+    WriteFakeWgetScript(0, "not json at all");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsInvalidWhenTagNameMissing()
 {
-    WriteFakeCurlScript(0,
+    WriteFakeWgetScript(0,
         R"({"assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsInvalidWhenTagNameEmpty()
 {
-    WriteFakeCurlScript(0,
+    WriteFakeWgetScript(0,
         R"({"tag_name":"","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsInvalidWhenAssetsArrayMissing()
 {
-    WriteFakeCurlScript(0, R"({"tag_name":"v1.0.0"})");
+    WriteFakeWgetScript(0, R"({"tag_name":"v1.0.0"})");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsInvalidWhenNoKoboRootAsset()
 {
-    WriteFakeCurlScript(0,
+    WriteFakeWgetScript(0,
         R"({"tag_name":"v1.0.0","assets":[{"name":"OtherFile.tgz","browser_download_url":"http://example.com/OtherFile.tgz"}]})");
     QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
 
 void GitHubInterfaceTest::returnsValidReleaseForWellFormedResponse()
 {
-    WriteFakeCurlScript(0,
+    WriteFakeWgetScript(0,
         R"({"tag_name":"v1.2.3","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})");
     const auto release = GitHubInterface::GetLatestRelease("owner/repo");
     QVERIFY(release.IsValid());
@@ -100,7 +100,7 @@ void GitHubInterfaceTest::returnsValidReleaseForWellFormedResponse()
 
 void GitHubInterfaceTest::selectsKoboRootUrlWhenMultipleAssets()
 {
-    WriteFakeCurlScript(0,
+    WriteFakeWgetScript(0,
         R"({"tag_name":"v2.0.0","assets":[)"
         R"({"name":"checksums.txt","browser_download_url":"http://example.com/checksums.txt"},)"
         R"({"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"},)"

@@ -7,11 +7,12 @@
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
     QByteArray output;
-    const bool ok = Utilities::RunProcess("curl",
+    const bool ok = Utilities::RunProcess("wget",
                                            {
-                                               "-fsSL",
-                                               "-H", "User-Agent: NickelUpdater",
-                                               "-H", "Accept: application/vnd.github+json",
+                                               "-q",
+                                               "--header", "User-Agent: NickelUpdater",
+                                               "--header", "Accept: application/vnd.github+json",
+                                               "-O", "-",
                                                QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId),
                                            },
                                            &output);

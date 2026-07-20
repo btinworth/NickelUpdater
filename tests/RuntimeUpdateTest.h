@@ -21,7 +21,7 @@ private slots:
 
 private:
     QString CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const;
-    void WriteFakeCurlScript() const;
+    void WriteFakeWgetScript() const;
     void WriteFakeRebootScript() const;
     QString ReadFile(const QString& path) const;
     QStringList TarList(const QString& archivePath) const;

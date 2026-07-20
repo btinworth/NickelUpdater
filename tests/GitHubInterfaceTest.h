@@ -12,7 +12,7 @@ private slots:
     void init();
     void cleanup();
 
-    void returnsInvalidWhenCurlFails();
+    void returnsInvalidWhenWgetFails();
     void returnsInvalidWhenResponseIsNotJson();
     void returnsInvalidWhenTagNameMissing();
     void returnsInvalidWhenTagNameEmpty();
@@ -22,7 +22,7 @@ private slots:
     void selectsKoboRootUrlWhenMultipleAssets();
 
 private:
-    void WriteFakeCurlScript(int exitCode, const QByteArray& response) const;
+    void WriteFakeWgetScript(int exitCode, const QByteArray& response) const;
 
     QString TempRoot;
     QString BinDir;

@@ -11,7 +11,7 @@ bool Utilities::RunProcess(const QString& program, const QStringList& args, QByt
 {
     QProcess process;
     process.start(program, args);
-    if (!process.waitForFinished() || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    if (!process.waitForFinished(-1) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
     {
         return false;
     }
@@ -26,13 +26,12 @@ bool Utilities::RunProcess(const QString& program, const QStringList& args, QByt
 
 bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 {
-    return RunProcess("curl",
+    return RunProcess("wget",
                        {
-                           "-fsSL",
-                           "-L",
-                           "-H", "User-Agent: NickelUpdater",
-                           "-H", "Accept: application/vnd.github+json",
-                           "-o", outputPath,
+                           "-q",
+                           "--header", "User-Agent: NickelUpdater",
+                           "--header", "Accept: application/vnd.github+json",
+                           "-O", outputPath,
                            url,
                        });
 }

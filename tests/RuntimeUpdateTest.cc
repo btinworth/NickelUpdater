@@ -77,9 +77,9 @@ QString RuntimeUpdateTest::CreateArchiveWithFile(const QString& relativePath, co
     return archivePath;
 }
 
-void RuntimeUpdateTest::WriteFakeCurlScript() const
+void RuntimeUpdateTest::WriteFakeWgetScript() const
 {
-    const auto scriptPath = QDir(BinDir).filePath("curl");
+    const auto scriptPath = QDir(BinDir).filePath("wget");
     QFile script(scriptPath);
     QVERIFY(script.open(QIODevice::WriteOnly | QIODevice::Text));
     script.write(
@@ -87,15 +87,24 @@ void RuntimeUpdateTest::WriteFakeCurlScript() const
         "out=\"\"\n"
         "url=\"\"\n"
         "while [ $# -gt 0 ]; do\n"
-        "  if [ \"$1\" = \"-o\" ]; then\n"
-        "    out=\"$2\"\n"
-        "    shift 2\n"
-        "  else\n"
-        "    url=\"$1\"\n"
-        "    shift\n"
-        "  fi\n"
+        "  case \"$1\" in\n"
+        "    -O)\n"
+        "      out=\"$2\"\n"
+        "      shift 2\n"
+        "      ;;\n"
+        "    --header)\n"
+        "      shift 2\n"
+        "      ;;\n"
+        "    -q)\n"
+        "      shift\n"
+        "      ;;\n"
+        "    *)\n"
+        "      url=\"$1\"\n"
+        "      shift\n"
+        "      ;;\n"
+        "  esac\n"
         "done\n"
-        "if [ -n \"$out\" ]; then\n"
+        "if [ -n \"$out\" ] && [ \"$out\" != \"-\" ]; then\n"
         "  if [ \"$url\" = \"http://fake/plugin-a.tgz\" ]; then\n"
         "    cp \"$NU_PLUGIN_A_ARCHIVE\" \"$out\"\n"
         "    exit $?\n"
@@ -185,7 +194,7 @@ void RuntimeUpdateTest::init()
     templateFile.write("# template\n");
     templateFile.close();
 
-    WriteFakeCurlScript();
+    WriteFakeWgetScript();
     WriteFakeRebootScript();
 }
 
@@ -276,7 +285,7 @@ void RuntimeUpdateTest::singlePluginUpdate()
 
 void RuntimeUpdateTest::partialFailureStillFinalizes()
 {
-    // plugin-a is known to the fake curl; owner/unknown-plugin has no entry in the fake curl
+    // plugin-a is known to the fake wget; owner/unknown-plugin has no entry in the fake wget
     // script so its GitHub API call exits 1 — it fails but plugin-a should still succeed.
     const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
     QVERIFY(!pluginAArchive.isEmpty());
@@ -302,7 +311,7 @@ void RuntimeUpdateTest::partialFailureStillFinalizes()
 
 void RuntimeUpdateTest::allPluginsFailDoesNotFinalize()
 {
-    // Neither plugin has a fake curl entry, so all GitHub API calls exit 1.
+    // Neither plugin has a fake wget entry, so all GitHub API calls exit 1.
     WriteConfig(
         "owner/unknown-plugin-x = v1\n"
         "owner/unknown-plugin-y = v1\n");
