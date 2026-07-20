@@ -1,6 +1,6 @@
 #include "Constants.h"
 
-const char* ONBOARD_DIR = "/mnt/onboard";
+const char* KOBOROOT_PATH = "/mnt/onboard/.kobo/KoboRoot.tgz";
 
 const char* NICKELUPDATER_TMPL = "/usr/local/nickelupdater/nickelupdater.conf.tmpl";
 

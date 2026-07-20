@@ -59,9 +59,8 @@ bool Utilities::CreateArchive(const QString& sourceDir, const QString& archivePa
 
 bool Utilities::PublishArchive(const QString& archivePath)
 {
-    const auto onboardFilePath = QDir(ONBOARD_DIR).filePath("KoboRoot.tgz");
-    QFile::remove(onboardFilePath);
-    return QFile::copy(archivePath, onboardFilePath);
+    QFile::remove(KOBOROOT_PATH);
+    return QFile::copy(archivePath, KOBOROOT_PATH);
 }
 
 bool Utilities::RebootDevice()

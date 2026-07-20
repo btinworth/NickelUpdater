@@ -1,6 +1,6 @@
 #pragma once
 
-extern const char* ONBOARD_DIR;
+extern const char* KOBOROOT_PATH;
 
 extern const char* NICKELUPDATER_TMPL;
 

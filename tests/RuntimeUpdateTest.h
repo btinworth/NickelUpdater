@@ -30,19 +30,20 @@ private:
     QString TempRoot;
     QString BinDir;
     QString DataDir;
-    QString OnboardDir;
+    QString KoboDir;
+    QString KoboRootPath;
     QString ConfigPath;
     QString TemplatePath;
     QString StagingDir;
 
-    QByteArray OnboardDirBytes;
+    QByteArray KoboRootPathBytes;
     QByteArray ConfigDirBytes;
     QByteArray ConfigPathBytes;
     QByteArray TemplatePathBytes;
     QByteArray StagingDirBytes;
     QByteArray OriginalPath;
 
-    const char* OriginalOnboardDir = nullptr;
+    const char* OriginalKoboRootPath = nullptr;
     const char* OriginalConfigDir = nullptr;
     const char* OriginalConfigPath = nullptr;
     const char* OriginalTemplatePath = nullptr;

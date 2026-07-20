@@ -154,7 +154,7 @@ void RuntimeUpdateTest::WriteFakeRebootScript() const
 
 void RuntimeUpdateTest::init()
 {
-    OriginalOnboardDir = ONBOARD_DIR;
+    OriginalKoboRootPath = KOBOROOT_PATH;
     OriginalConfigDir = CONFIG_DIR;
     OriginalConfigPath = NICKELUPDATER_CONF;
     OriginalTemplatePath = NICKELUPDATER_TMPL;
@@ -163,17 +163,18 @@ void RuntimeUpdateTest::init()
     TempRoot = QDir::temp().filePath(QString("nickelupdater-runtime-test-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
     BinDir = QDir(TempRoot).filePath("bin");
     DataDir = QDir(TempRoot).filePath("data");
-    OnboardDir = QDir(TempRoot).filePath("onboard");
+    KoboDir = QDir(TempRoot).filePath("kobo");
+    KoboRootPath = QDir(KoboDir).filePath("KoboRoot.tgz");
     ConfigPath = QDir(TempRoot).filePath("nickelupdater.conf");
     TemplatePath = QDir(TempRoot).filePath("nickelupdater.conf.tmpl");
     StagingDir = QDir(TempRoot).filePath("staging");
 
     QVERIFY(QDir().mkpath(BinDir));
     QVERIFY(QDir().mkpath(DataDir));
-    QVERIFY(QDir().mkpath(OnboardDir));
+    QVERIFY(QDir().mkpath(KoboDir));
     QVERIFY(QDir().mkpath(TempRoot));
 
-    OnboardDirBytes = OnboardDir.toUtf8();
+    KoboRootPathBytes = KoboRootPath.toUtf8();
     ConfigDirBytes = TempRoot.toUtf8();
     ConfigPathBytes = ConfigPath.toUtf8();
     TemplatePathBytes = TemplatePath.toUtf8();
@@ -183,7 +184,7 @@ void RuntimeUpdateTest::init()
     const auto testPath = BinDir.toUtf8() + ":" + OriginalPath;
     qputenv("PATH", testPath);
 
-    ONBOARD_DIR = OnboardDirBytes.constData();
+    KOBOROOT_PATH = KoboRootPathBytes.constData();
     CONFIG_DIR = ConfigDirBytes.constData();
     NICKELUPDATER_CONF = ConfigPathBytes.constData();
     NICKELUPDATER_TMPL = TemplatePathBytes.constData();
@@ -200,7 +201,7 @@ void RuntimeUpdateTest::init()
 
 void RuntimeUpdateTest::cleanup()
 {
-    ONBOARD_DIR = OriginalOnboardDir;
+    KOBOROOT_PATH = OriginalKoboRootPath;
     CONFIG_DIR = OriginalConfigDir;
     NICKELUPDATER_CONF = OriginalConfigPath;
     NICKELUPDATER_TMPL = OriginalTemplatePath;
@@ -232,9 +233,8 @@ void RuntimeUpdateTest::batchesMultipleUpdatesIntoSingleFinalize()
     QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
     QVERIFY(savedConfig.contains("owner/plugin-b = v11\n"));
 
-    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
-    QVERIFY(QFile::exists(onboardArchive));
-    const auto members = TarList(onboardArchive);
+    QVERIFY(QFile::exists(KoboRootPath));
+    const auto members = TarList(KoboRootPath);
     QVERIFY(members.contains("./plugin-a/a.txt"));
     QVERIFY(members.contains("./plugin-b/b.txt"));
 }
@@ -259,7 +259,7 @@ void RuntimeUpdateTest::noEffectiveChangeDoesNotFinalize()
     updater.OnNetworkConnected();
 
     QCOMPARE(ReadFile(ConfigPath), initialConfig);
-    QVERIFY(!QFile::exists(QDir(OnboardDir).filePath("KoboRoot.tgz")));
+    QVERIFY(!QFile::exists(KoboRootPath));
 }
 
 void RuntimeUpdateTest::singlePluginUpdate()
@@ -277,9 +277,8 @@ void RuntimeUpdateTest::singlePluginUpdate()
     const auto savedConfig = ReadFile(ConfigPath);
     QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
 
-    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
-    QVERIFY(QFile::exists(onboardArchive));
-    const auto members = TarList(onboardArchive);
+    QVERIFY(QFile::exists(KoboRootPath));
+    const auto members = TarList(KoboRootPath);
     QVERIFY(members.contains("./plugin-a/a.txt"));
 }
 
@@ -303,9 +302,8 @@ void RuntimeUpdateTest::partialFailureStillFinalizes()
     QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
     QVERIFY(savedConfig.contains("owner/unknown-plugin = v1\n"));
 
-    const auto onboardArchive = QDir(OnboardDir).filePath("KoboRoot.tgz");
-    QVERIFY(QFile::exists(onboardArchive));
-    const auto members = TarList(onboardArchive);
+    QVERIFY(QFile::exists(KoboRootPath));
+    const auto members = TarList(KoboRootPath);
     QVERIFY(members.contains("./plugin-a/a.txt"));
 }
 
@@ -319,7 +317,7 @@ void RuntimeUpdateTest::allPluginsFailDoesNotFinalize()
     NickelUpdater updater;
     updater.OnNetworkConnected();
 
-    QVERIFY(!QFile::exists(QDir(OnboardDir).filePath("KoboRoot.tgz")));
+    QVERIFY(!QFile::exists(KoboRootPath));
 }
 
 void RuntimeUpdateTest::configMissingIsCreatedFromTemplate()
