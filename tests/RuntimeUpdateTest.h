@@ -18,6 +18,8 @@ private slots:
     void partialFailureStillFinalizes();
     void allPluginsFailDoesNotFinalize();
     void configMissingIsCreatedFromTemplate();
+    void movedTagWithSameNameTriggersUpdate();
+    void unchangedTagAndCommitDoesNotFinalize();
 
 private:
     QString CreateArchiveWithFile(const QString& relativePath, const QString& content, const QString& archiveBaseName) const;

@@ -6,4 +6,7 @@ class GitHubInterface
 {
 public:
     static PluginRelease GetLatestRelease(const QString& pluginId);
+
+private:
+    static QString GetCommitHash(const QString& pluginId, const QString& tagName);
 };

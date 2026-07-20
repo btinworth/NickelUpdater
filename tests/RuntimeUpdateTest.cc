@@ -123,6 +123,22 @@ void RuntimeUpdateTest::WriteFakeWgetScript() const
         "  printf '{\"tag_name\":\"%s\",\"assets\":[{\"name\":\"KoboRoot.tgz\",\"browser_download_url\":\"http://fake/plugin-b.tgz\"}]}' \"$NU_PLUGIN_B_TAG\"\n"
         "  exit 0\n"
         "fi\n"
+        "case \"$url\" in\n"
+        "  https://api.github.com/repos/owner/plugin-a/commits/*)\n"
+        "    if [ -n \"$NU_PLUGIN_A_COMMIT\" ]; then\n"
+        "      printf '{\"sha\":\"%s\"}' \"$NU_PLUGIN_A_COMMIT\"\n"
+        "      exit 0\n"
+        "    fi\n"
+        "    exit 1\n"
+        "    ;;\n"
+        "  https://api.github.com/repos/owner/plugin-b/commits/*)\n"
+        "    if [ -n \"$NU_PLUGIN_B_COMMIT\" ]; then\n"
+        "      printf '{\"sha\":\"%s\"}' \"$NU_PLUGIN_B_COMMIT\"\n"
+        "      exit 0\n"
+        "    fi\n"
+        "    exit 1\n"
+        "    ;;\n"
+        "esac\n"
         "exit 1\n");
     script.close();
 
@@ -221,17 +237,19 @@ void RuntimeUpdateTest::batchesMultipleUpdatesIntoSingleFinalize()
     qputenv("NU_PLUGIN_B_ARCHIVE", pluginBArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
     qputenv("NU_PLUGIN_B_TAG", QByteArray("v11"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("sha-a2"));
+    qputenv("NU_PLUGIN_B_COMMIT", QByteArray("sha-b11"));
 
     WriteConfig(
-        "owner/plugin-a = v1\n"
-        "owner/plugin-b = v10\n");
+        "owner/plugin-a = v1@sha-a1\n"
+        "owner/plugin-b = v10@sha-b10\n");
 
     NickelUpdater updater;
     updater.OnNetworkConnected();
 
     const auto savedConfig = ReadFile(ConfigPath);
-    QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
-    QVERIFY(savedConfig.contains("owner/plugin-b = v11\n"));
+    QVERIFY(savedConfig.contains("owner/plugin-a = v2@sha-a2\n"));
+    QVERIFY(savedConfig.contains("owner/plugin-b = v11@sha-b11\n"));
 
     QVERIFY(QFile::exists(KoboRootPath));
     const auto members = TarList(KoboRootPath);
@@ -249,10 +267,12 @@ void RuntimeUpdateTest::noEffectiveChangeDoesNotFinalize()
     qputenv("NU_PLUGIN_B_ARCHIVE", pluginBArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v1"));
     qputenv("NU_PLUGIN_B_TAG", QByteArray("v2"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("sha-a1"));
+    qputenv("NU_PLUGIN_B_COMMIT", QByteArray("sha-b2"));
 
     const QString initialConfig =
-        "owner/plugin-a = v1\n"
-        "owner/plugin-b = v2\n";
+        "owner/plugin-a = v1@sha-a1\n"
+        "owner/plugin-b = v2@sha-b2\n";
     WriteConfig(initialConfig);
 
     NickelUpdater updater;
@@ -268,14 +288,15 @@ void RuntimeUpdateTest::singlePluginUpdate()
     QVERIFY(!pluginAArchive.isEmpty());
     qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("sha-a2"));
 
-    WriteConfig("owner/plugin-a = v1\n");
+    WriteConfig("owner/plugin-a = v1@sha-a1\n");
 
     NickelUpdater updater;
     updater.OnNetworkConnected();
 
     const auto savedConfig = ReadFile(ConfigPath);
-    QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
+    QVERIFY(savedConfig.contains("owner/plugin-a = v2@sha-a2\n"));
 
     QVERIFY(QFile::exists(KoboRootPath));
     const auto members = TarList(KoboRootPath);
@@ -290,16 +311,17 @@ void RuntimeUpdateTest::partialFailureStillFinalizes()
     QVERIFY(!pluginAArchive.isEmpty());
     qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
     qputenv("NU_PLUGIN_A_TAG", QByteArray("v2"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("sha-a2"));
 
     WriteConfig(
-        "owner/plugin-a = v1\n"
+        "owner/plugin-a = v1@sha-a1\n"
         "owner/unknown-plugin = v1\n");
 
     NickelUpdater updater;
     updater.OnNetworkConnected();
 
     const auto savedConfig = ReadFile(ConfigPath);
-    QVERIFY(savedConfig.contains("owner/plugin-a = v2\n"));
+    QVERIFY(savedConfig.contains("owner/plugin-a = v2@sha-a2\n"));
     QVERIFY(savedConfig.contains("owner/unknown-plugin = v1\n"));
 
     QVERIFY(QFile::exists(KoboRootPath));
@@ -317,6 +339,47 @@ void RuntimeUpdateTest::allPluginsFailDoesNotFinalize()
     NickelUpdater updater;
     updater.OnNetworkConnected();
 
+    QVERIFY(!QFile::exists(KoboRootPath));
+}
+
+void RuntimeUpdateTest::movedTagWithSameNameTriggersUpdate()
+{
+    // The tag name is unchanged, but the tag was force-moved to point at a new commit; the
+    // stored commit hash should still cause the update to trigger.
+    const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
+    QVERIFY(!pluginAArchive.isEmpty());
+    qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
+    qputenv("NU_PLUGIN_A_TAG", QByteArray("v1"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("newsha"));
+
+    WriteConfig("owner/plugin-a = v1@oldsha\n");
+
+    NickelUpdater updater;
+    updater.OnNetworkConnected();
+
+    const auto savedConfig = ReadFile(ConfigPath);
+    QVERIFY(savedConfig.contains("owner/plugin-a = v1@newsha\n"));
+
+    QVERIFY(QFile::exists(KoboRootPath));
+    const auto members = TarList(KoboRootPath);
+    QVERIFY(members.contains("./plugin-a/a.txt"));
+}
+
+void RuntimeUpdateTest::unchangedTagAndCommitDoesNotFinalize()
+{
+    const auto pluginAArchive = CreateArchiveWithFile("plugin-a/a.txt", "A", "plugin-a");
+    QVERIFY(!pluginAArchive.isEmpty());
+    qputenv("NU_PLUGIN_A_ARCHIVE", pluginAArchive.toUtf8());
+    qputenv("NU_PLUGIN_A_TAG", QByteArray("v1"));
+    qputenv("NU_PLUGIN_A_COMMIT", QByteArray("samesha"));
+
+    const QString initialConfig = "owner/plugin-a = v1@samesha\n";
+    WriteConfig(initialConfig);
+
+    NickelUpdater updater;
+    updater.OnNetworkConnected();
+
+    QCOMPARE(ReadFile(ConfigPath), initialConfig);
     QVERIFY(!QFile::exists(KoboRootPath));
 }
 

@@ -18,14 +18,14 @@ Open the `.adds/nickelupdater/nickelupdater.conf` file in a text editor.
 
 Add one plugin per line:
 
-`owner/repo = installed_version`
+`owner/repo = installed_tag@installed_commit`
 
-Keep `installed_version` blank on first install. NickelUpdater fills it in after each successful update.
+Keep `installed_tag@installed_commit` blank on first install. NickelUpdater fills it in after each successful update.
 
 ```conf
 # NickelUpdater configuration
-# Format: owner/repo = installed_version
-# Keep installed_version blank on first install.
+# Format: owner/repo = installed_tag@installed_commit
+# Only include 'owner/repo =' on first install
 btinworth/NickelUpdater =
 ```
 

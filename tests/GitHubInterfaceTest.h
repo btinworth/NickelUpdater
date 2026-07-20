@@ -20,9 +20,12 @@ private slots:
     void returnsInvalidWhenNoKoboRootAsset();
     void returnsValidReleaseForWellFormedResponse();
     void selectsKoboRootUrlWhenMultipleAssets();
+    void appendsCommitHashToTagNameWhenResolvable();
+    void returnsInvalidWhenCommitHashCannotBeResolved();
 
 private:
-    void WriteFakeWgetScript(int exitCode, const QByteArray& response) const;
+    void WriteFakeWgetScript(int exitCode, const QByteArray& response,
+                             int commitExitCode = 1, const QByteArray& commitResponse = {}) const;
 
     QString TempRoot;
     QString BinDir;

@@ -22,22 +22,41 @@ void GitHubInterfaceTest::cleanup()
     QDir(TempRoot).removeRecursively();
 }
 
-void GitHubInterfaceTest::WriteFakeWgetScript(int exitCode, const QByteArray& response) const
+void GitHubInterfaceTest::WriteFakeWgetScript(int exitCode, const QByteArray& response,
+                                               int commitExitCode, const QByteArray& commitResponse) const
 {
-    // Write the response to a file to avoid any shell-escaping concerns
+    // Write the responses to files to avoid any shell-escaping concerns
     const auto responsePath = QDir(TempRoot).filePath("response.json");
     QFile responseFile(responsePath);
     QVERIFY(responseFile.open(QIODevice::WriteOnly));
     responseFile.write(response);
     responseFile.close();
 
+    const auto commitResponsePath = QDir(TempRoot).filePath("commit-response.json");
+    QFile commitResponseFile(commitResponsePath);
+    QVERIFY(commitResponseFile.open(QIODevice::WriteOnly));
+    commitResponseFile.write(commitResponse);
+    commitResponseFile.close();
+
     const auto scriptPath = QDir(BinDir).filePath("wget");
     QFile script(scriptPath);
     QVERIFY(script.open(QIODevice::WriteOnly | QIODevice::Text));
     script.write(QString(
                      "#!/bin/sh\n"
-                     "cat '%1'\n"
-                     "exit %2\n")
+                     "url=\"\"\n"
+                     "for arg in \"$@\"; do url=\"$arg\"; done\n"
+                     "case \"$url\" in\n"
+                     "  *commits*)\n"
+                     "    cat '%1'\n"
+                     "    exit %2\n"
+                     "    ;;\n"
+                     "  *)\n"
+                     "    cat '%3'\n"
+                     "    exit %4\n"
+                     "    ;;\n"
+                     "esac\n")
+                     .arg(commitResponsePath)
+                     .arg(commitExitCode)
                      .arg(responsePath)
                      .arg(exitCode)
                      .toUtf8());
@@ -91,10 +110,11 @@ void GitHubInterfaceTest::returnsInvalidWhenNoKoboRootAsset()
 void GitHubInterfaceTest::returnsValidReleaseForWellFormedResponse()
 {
     WriteFakeWgetScript(0,
-        R"({"tag_name":"v1.2.3","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})");
+        R"({"tag_name":"v1.2.3","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})",
+        0, R"({"sha":"a1b2c3d4e5f6"})");
     const auto release = GitHubInterface::GetLatestRelease("owner/repo");
     QVERIFY(release.IsValid());
-    QCOMPARE(release.TagName, QString("v1.2.3"));
+    QCOMPARE(release.TagName, QString("v1.2.3@a1b2c3d4e5f6"));
     QCOMPARE(release.KoboRootUrl, QString("http://example.com/KoboRoot.tgz"));
 }
 
@@ -105,9 +125,28 @@ void GitHubInterfaceTest::selectsKoboRootUrlWhenMultipleAssets()
         R"({"name":"checksums.txt","browser_download_url":"http://example.com/checksums.txt"},)"
         R"({"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"},)"
         R"({"name":"debug.zip","browser_download_url":"http://example.com/debug.zip"})"
-        R"(]})");
+        R"(]})",
+        0, R"({"sha":"b2c3d4e5f6a1"})");
     const auto release = GitHubInterface::GetLatestRelease("owner/repo");
     QVERIFY(release.IsValid());
-    QCOMPARE(release.TagName, QString("v2.0.0"));
+    QCOMPARE(release.TagName, QString("v2.0.0@b2c3d4e5f6a1"));
     QCOMPARE(release.KoboRootUrl, QString("http://example.com/KoboRoot.tgz"));
+}
+
+void GitHubInterfaceTest::appendsCommitHashToTagNameWhenResolvable()
+{
+    WriteFakeWgetScript(0,
+        R"({"tag_name":"v1.2.3","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})",
+        0, R"({"sha":"a1b2c3d4e5f6"})");
+    const auto release = GitHubInterface::GetLatestRelease("owner/repo");
+    QVERIFY(release.IsValid());
+    QCOMPARE(release.TagName, QString("v1.2.3@a1b2c3d4e5f6"));
+}
+
+void GitHubInterfaceTest::returnsInvalidWhenCommitHashCannotBeResolved()
+{
+    WriteFakeWgetScript(0,
+        R"({"tag_name":"v1.2.3","assets":[{"name":"KoboRoot.tgz","browser_download_url":"http://example.com/KoboRoot.tgz"}]})",
+        1, "");
+    QVERIFY(!GitHubInterface::GetLatestRelease("owner/repo").IsValid());
 }
