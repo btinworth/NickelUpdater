@@ -1,7 +1,5 @@
 #include "Utilities.h"
 #include "Constants.h"
-#include "GitHubInterface.h"
-#include "UserConfig.h"
 #include <NickelHook.h>
 #include <QDir>
 #include <QEventLoop>
@@ -30,7 +28,7 @@ bool Utilities::RunProcess(const QString& program, const QStringList& args, QByt
 
 bool Utilities::HttpGet(const QString& url, QByteArray* output)
 {
-    static QNetworkAccessManager manager;
+    thread_local QNetworkAccessManager manager;
 
     QUrl currentUrl = QUrl(url);
     for (int redirectsRemaining = 5; redirectsRemaining > 0; --redirectsRemaining)
@@ -123,113 +121,6 @@ bool Utilities::PublishArchive(const QString& archivePath)
 bool Utilities::RebootDevice()
 {
     return QProcess::startDetached("reboot");
-}
-
-bool Utilities::PrepareMergeDirectory(const QString& mergeDirPath)
-{
-    QDir stagingRoot(STAGING_DIR);
-    if (stagingRoot.exists() && !stagingRoot.removeRecursively())
-    {
-        nh_log("Failed to clear staging directory: %s", STAGING_DIR);
-        return false;
-    }
-
-    if (!QDir().mkpath(mergeDirPath))
-    {
-        nh_log("Failed to create merge directory: %s", qPrintable(mergeDirPath));
-        return false;
-    }
-
-    return true;
-}
-
-QString Utilities::ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath)
-{
-    const auto release = GitHubInterface::GetLatestRelease(plugin.PluginId);
-    if (!release.IsValid())
-    {
-        nh_log("Failed to load latest release for %s", qPrintable(plugin.PluginId));
-        return {};
-    }
-
-    if (!plugin.TagName.isEmpty() && plugin.TagName == release.TagName)
-    {
-        nh_log("Plugin %s already at %s", qPrintable(plugin.PluginId), qPrintable(plugin.TagName));
-        return {};
-    }
-
-    const auto stageDirPath = StageDirectoryForPlugin(plugin.PluginId);
-    if (!QDir().mkpath(stageDirPath))
-    {
-        nh_log("Failed to create stage dir for %s", qPrintable(plugin.PluginId));
-        return {};
-    }
-
-    const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
-    if (!DownloadFile(release.KoboRootUrl, stageFilePath))
-    {
-        nh_log("Failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
-        return {};
-    }
-
-    if (!ExtractArchive(stageFilePath, mergeDirPath))
-    {
-        nh_log("Failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
-        return {};
-    }
-
-    nh_log("Staged %s for %s", qPrintable(release.TagName), qPrintable(plugin.PluginId));
-
-    return release.TagName;
-}
-
-bool Utilities::ApplyPluginUpdates(UserConfig& config, const QString& mergeDirPath)
-{
-    bool hasUpdates = false;
-    for (const auto& plugin : config.GetPlugins())
-    {
-        const auto tagName = ProcessPluginUpdate(plugin, mergeDirPath);
-        if (tagName.isEmpty())
-        {
-            continue;
-        }
-
-        config.SetTag(plugin.PluginId, tagName);
-        hasUpdates = true;
-    }
-
-    return hasUpdates;
-}
-
-bool Utilities::FinalizeAndApplyUpdates(const UserConfig& config, const QString& mergeDirPath)
-{
-    if (!config.Save(NICKELUPDATER_CONF))
-    {
-        nh_log("Failed to save updated tags");
-        return false;
-    }
-
-    const auto mergedArchivePath = MergedArchivePath();
-    if (!CreateArchive(mergeDirPath, mergedArchivePath))
-    {
-        nh_log("Failed to create merged KoboRoot.tgz");
-        return false;
-    }
-
-    if (!PublishArchive(mergedArchivePath))
-    {
-        nh_log("Failed to publish merged KoboRoot.tgz");
-        return false;
-    }
-
-    if (!RebootDevice())
-    {
-        nh_log("Failed to reboot after publishing merged KoboRoot.tgz");
-        return false;
-    }
-
-    nh_log("Published merged KoboRoot.tgz");
-    return true;
 }
 
 void Utilities::CreateConfig(const char* filePath, const char* tmplFilePath)

@@ -1,46 +1,39 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
-#include "GitHubInterface.h"
-#include "UserConfig.h"
+#include "UpdateWorker.h"
 #include "Utilities.h"
 #include <NickelHook.h>
 
 QObject* (*WirelessManagerInstance)() = nullptr;
 
-NickelUpdater::NickelUpdater()
+NickelUpdater::NickelUpdater() : Worker(new UpdateWorker)
 {
     Utilities::CreateConfig(NICKELUPDATER_CONF, NICKELUPDATER_TMPL);
+
+    Worker->moveToThread(&WorkerThread);
+    connect(&WorkerThread, &QThread::finished, Worker, &QObject::deleteLater);
+    connect(Worker, &UpdateWorker::Finished, this, &NickelUpdater::OnUpdateFinished);
+    WorkerThread.start();
+}
+
+NickelUpdater::~NickelUpdater()
+{
+    WorkerThread.quit();
+    WorkerThread.wait();
 }
 
 void NickelUpdater::OnNetworkConnected()
 {
-    nh_log("Starting update");
-
-    UserConfig config;
-    if (!config.Load(NICKELUPDATER_CONF))
-    {
-        nh_log("Failed to open config: %s", NICKELUPDATER_CONF);
-        return;
-    }
-
-    nh_log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(config.GetPlugins().size()));
-
-    const auto mergeDirPath = Utilities::MergeDirectoryPath();
-    if (!Utilities::PrepareMergeDirectory(mergeDirPath))
-    {
-        return;
-    }
-
-    if (!Utilities::ApplyPluginUpdates(config, mergeDirPath))
-    {
-        nh_log("No updates to apply");
-        return;
-    }
-
-    if (!Utilities::FinalizeAndApplyUpdates(config, mergeDirPath))
-    {
-        return;
-    }
-
-    nh_log("Update finished");
+    QMetaObject::invokeMethod(Worker, "Run", Qt::QueuedConnection);
 }
+
+void NickelUpdater::OnUpdateFinished(bool hasUpdates)
+{
+    if (hasUpdates)
+    {
+        nh_log("Updates staged and published");
+    }
+
+    emit UpdateFinished(hasUpdates);
+}
+
