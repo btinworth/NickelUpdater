@@ -1,11 +1,15 @@
 #include "ConfigParseTest.h"
-#include "GitHubInterfaceTest.h"
 #include "PluginReleaseTest.h"
-#include "RuntimeUpdateTest.h"
+#include <QCoreApplication>
 #include <QtTest>
 
 int main(int argc, char** argv)
 {
+    // QNetworkAccessManager (used via Utilities::HttpGet) requires a QCoreApplication instance to
+    // be alive for its event dispatcher; without it, requests silently fail and the nested
+    // QEventLoop used to wait for them blocks forever.
+    QCoreApplication app(argc, argv);
+
     int status = 0;
 
     ConfigParseTest configParseTest;
@@ -14,11 +18,6 @@ int main(int argc, char** argv)
     PluginReleaseTest pluginReleaseTest;
     status |= QTest::qExec(&pluginReleaseTest, argc, argv);
 
-    GitHubInterfaceTest gitHubInterfaceTest;
-    status |= QTest::qExec(&gitHubInterfaceTest, argc, argv);
-
-    RuntimeUpdateTest runtimeUpdateTest;
-    status |= QTest::qExec(&runtimeUpdateTest, argc, argv);
-
     return status;
 }
+

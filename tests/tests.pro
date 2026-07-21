@@ -1,4 +1,4 @@
-QT += core testlib
+QT += core network testlib
 QT -= gui
 
 CONFIG += testcase console c++11

@@ -3,19 +3,12 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
 
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
     QByteArray output;
-    const bool ok = Utilities::RunProcess("wget",
-                                           {
-                                               "-q",
-                                               "--header", "User-Agent: NickelUpdater",
-                                               "--header", "Accept: application/vnd.github+json",
-                                               "-O", "-",
-                                               QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId),
-                                           },
-                                           &output);
+    const bool ok = Utilities::HttpGet(QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId), &output);
     if (!ok)
     {
         return {};
@@ -67,15 +60,7 @@ PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 QString GitHubInterface::GetCommitHash(const QString& pluginId, const QString& tagName)
 {
     QByteArray output;
-    const bool ok = Utilities::RunProcess("wget",
-                                           {
-                                               "-q",
-                                               "--header", "User-Agent: NickelUpdater",
-                                               "--header", "Accept: application/vnd.github+json",
-                                               "-O", "-",
-                                               QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName),
-                                           },
-                                           &output);
+    const bool ok = Utilities::HttpGet(QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName), &output);
     if (!ok)
     {
         return {};

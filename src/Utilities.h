@@ -4,12 +4,11 @@
 #include <QByteArray>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 
 class Utilities
 {
 public:
-    // Downloads and stages any available update for each configured plugin, updating `config`'s
-    // tags as it goes. Returns true if at least one plugin was updated.
     static bool ApplyPluginUpdates(UserConfig& config, const QString& mergeDirPath);
 
     static bool FinalizeAndApplyUpdates(const UserConfig& config, const QString& mergeDirPath);
@@ -18,8 +17,9 @@ public:
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
     static QString MergeDirectoryPath();
 
-    // Runs `program` with `args` to completion; on success, captures stdout in `output` if given.
     static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
+
+    static bool HttpGet(const QString& url, QByteArray* output);
 
 private:
     static QString ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
