@@ -134,16 +134,16 @@ void ConfigParseTest::stripsInlineComments()
     QCOMPARE(plugins.at(1).TagName, QString("v2"));
 }
 
-void ConfigParseTest::duplicatePluginIdsAreBothRetained()
+void ConfigParseTest::duplicatePluginIdsKeepFirstEntry()
 {
     const auto config = LoadConfig(
         "owner/plugin = v1\n"
         "owner/plugin = v2\n");
 
     const auto& plugins = config.GetPlugins();
-    QCOMPARE(plugins.size(), 2);
+    QCOMPARE(plugins.size(), 1);
+    QCOMPARE(plugins.at(0).PluginId, QString("owner/plugin"));
     QCOMPARE(plugins.at(0).TagName, QString("v1"));
-    QCOMPARE(plugins.at(1).TagName, QString("v2"));
 }
 
 void ConfigParseTest::saveReturnsFalseForUnwritablePath()

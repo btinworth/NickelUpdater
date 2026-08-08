@@ -17,7 +17,7 @@ private slots:
     void loadEmptyFileReturnsNoPlugins();
     void skipsCommentAndBlankLines();
     void stripsInlineComments();
-    void duplicatePluginIdsAreBothRetained();
+    void duplicatePluginIdsKeepFirstEntry();
     void saveReturnsFalseForUnwritablePath();
 
 private:
