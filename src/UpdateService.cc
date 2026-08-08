@@ -2,11 +2,16 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include "PluginRelease.h"
-#include "Utilities.h"
 #include <NickelHook.h>
 #include <QDir>
+#include <QEventLoop>
 #include <QFile>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QProcess>
+#include <QScopedPointer>
+#include <QUrl>
 
 UpdateService::Result UpdateService::Run(UserConfig& config)
 {
@@ -112,7 +117,7 @@ QString UpdateService::StageDirectoryForPlugin(const QString& pluginId)
 bool UpdateService::DownloadFile(const QString& url, const QString& outputPath)
 {
     QByteArray output;
-    if (!Utilities::HttpGet(url, &output, "*/*"))
+    if (!HttpGet(url, &output, "*/*"))
     {
         return false;
     }
@@ -127,9 +132,56 @@ bool UpdateService::DownloadFile(const QString& url, const QString& outputPath)
     return file.write(output) == output.size();
 }
 
+bool UpdateService::HttpGet(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
+{
+    static QNetworkAccessManager manager;
+
+    QUrl currentUrl = QUrl(url);
+    for (int redirectsRemaining = 5; redirectsRemaining > 0; --redirectsRemaining)
+    {
+        QNetworkRequest request(currentUrl);
+        request.setRawHeader("User-Agent", "NickelUpdater");
+        request.setRawHeader("Accept", acceptHeader);
+
+        QScopedPointer<QNetworkReply> reply(manager.get(request));
+        QEventLoop loop;
+        QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+
+        if (reply->error() != QNetworkReply::NoError)
+        {
+            nh_log("HTTP GET failed for %s: %s", qPrintable(currentUrl.toString()), qPrintable(reply->errorString()));
+            return false;
+        }
+
+        const auto redirectTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        if (redirectTarget.isEmpty())
+        {
+            const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            if (statusCode < 200 || statusCode >= 300)
+            {
+                nh_log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
+                return false;
+            }
+
+            if (output != nullptr)
+            {
+                *output = reply->readAll();
+            }
+
+            return true;
+        }
+
+        currentUrl = currentUrl.resolved(redirectTarget);
+    }
+
+    nh_log("Too many redirects for %s", qPrintable(url));
+    return false;
+}
+
 bool UpdateService::ExtractArchive(const QString& archivePath, const QString& outputDir)
 {
-    return Utilities::RunProcess("tar", {"-xzf", archivePath, "-C", outputDir});
+    return RunProcess("tar", {"-xzf", archivePath, "-C", outputDir});
 }
 
 bool UpdateService::PublishMergedUpdate(const UserConfig& config, const QString& mergeDirPath)
@@ -171,7 +223,24 @@ QString UpdateService::MergedArchivePath()
 bool UpdateService::CreateArchive(const QString& sourceDir, const QString& archivePath)
 {
     QFile::remove(archivePath);
-    return Utilities::RunProcess("tar", {"-czf", archivePath, "-C", sourceDir, "."});
+    return RunProcess("tar", {"-czf", archivePath, "-C", sourceDir, "."});
+}
+
+bool UpdateService::RunProcess(const QString& program, const QStringList& args, QByteArray* output)
+{
+    QProcess process;
+    process.start(program, args);
+    if (!process.waitForFinished(-1) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    {
+        return false;
+    }
+
+    if (output != nullptr)
+    {
+        *output = process.readAllStandardOutput();
+    }
+
+    return true;
 }
 
 bool UpdateService::PublishArchive(const QString& archivePath)

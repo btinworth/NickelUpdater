@@ -13,4 +13,7 @@ public:
 
 public slots:
     void OnNetworkConnected();
+
+private:
+    static void CreateConfig(const char* filePath, const char* tmplFilePath);
 };
