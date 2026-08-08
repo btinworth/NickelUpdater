@@ -5,7 +5,13 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QScopedPointer>
+#include <QTimer>
 #include <QUrl>
+
+namespace
+{
+const int HTTP_REQUEST_TIMEOUT_MS = 15000;
+}
 
 bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
 {
@@ -20,8 +26,28 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
 
         QScopedPointer<QNetworkReply> reply(manager.get(request));
         QEventLoop loop;
+        bool timedOut = false;
+
+        QTimer timeoutTimer;
+        timeoutTimer.setSingleShot(true);
+        QObject::connect(&timeoutTimer, &QTimer::timeout, [&timedOut, &reply]() {
+            timedOut = true;
+            if (!reply.isNull())
+            {
+                reply->abort();
+            }
+        });
+
         QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS);
         loop.exec();
+        timeoutTimer.stop();
+
+        if (timedOut)
+        {
+            nh_log("HTTP GET timed out after %d ms for %s", HTTP_REQUEST_TIMEOUT_MS, qPrintable(currentUrl.toString()));
+            return false;
+        }
 
         if (reply->error() != QNetworkReply::NoError)
         {
