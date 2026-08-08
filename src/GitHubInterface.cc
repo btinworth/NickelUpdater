@@ -1,15 +1,14 @@
 #include "GitHubInterface.h"
-#include "HttpClient.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
-PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
+PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QString& pluginId)
 {
     const auto url = QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId);
 
     QByteArray output;
-    if (!HttpClient::Get(url, &output))
+    if (!httpClient.Get(url, &output))
     {
         return {};
     }
@@ -42,7 +41,7 @@ PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
             continue;
         }
 
-        const auto commitHash = GetCommitHash(pluginId, tagName);
+        const auto commitHash = GetCommitHash(httpClient, pluginId, tagName);
         if (commitHash.isEmpty())
         {
             return {};
@@ -57,12 +56,12 @@ PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
     return {};
 }
 
-QString GitHubInterface::GetCommitHash(const QString& pluginId, const QString& tagName)
+QString GitHubInterface::GetCommitHash(HttpClient& httpClient, const QString& pluginId, const QString& tagName)
 {
     const auto url = QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName);
 
     QByteArray output;
-    if (!HttpClient::Get(url, &output, "application/vnd.github.sha"))
+    if (!httpClient.Get(url, &output, "application/vnd.github.sha"))
     {
         return {};
     }

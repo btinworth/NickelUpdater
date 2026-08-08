@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HttpClient.h"
 #include <QObject>
 
 extern QObject* (*WirelessManagerInstance)();
@@ -13,7 +14,11 @@ public:
 
 public slots:
     void OnNetworkConnected();
+    void OnNetworkDisconnected();
 
 private:
+    HttpClient Client;
+    bool IsUpdating;
+
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
 };

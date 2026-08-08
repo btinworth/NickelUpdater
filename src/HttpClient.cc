@@ -13,18 +13,43 @@ namespace
 const int HTTP_REQUEST_TIMEOUT_MS = 15000;
 }
 
+void HttpClient::BeginSession()
+{
+    RequestSessionCanceled = false;
+}
+
+void HttpClient::CancelSession()
+{
+    RequestSessionCanceled = true;
+    if (ActiveReply != nullptr)
+    {
+        ActiveReply->abort();
+    }
+}
+
 bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
 {
-    static QNetworkAccessManager manager;
+    if (RequestSessionCanceled)
+    {
+        nh_log("HTTP GET canceled before request for %s", qPrintable(url));
+        return false;
+    }
 
     QUrl currentUrl = QUrl(url);
     for (int redirectsRemaining = 5; redirectsRemaining > 0; --redirectsRemaining)
     {
+        if (RequestSessionCanceled)
+        {
+            nh_log("HTTP GET canceled before request for %s", qPrintable(currentUrl.toString()));
+            return false;
+        }
+
         QNetworkRequest request(currentUrl);
         request.setRawHeader("User-Agent", "NickelUpdater");
         request.setRawHeader("Accept", acceptHeader);
 
-        QScopedPointer<QNetworkReply> reply(manager.get(request));
+        QScopedPointer<QNetworkReply> reply(Manager.get(request));
+        ActiveReply = reply.data();
         QEventLoop loop;
         bool timedOut = false;
 
@@ -42,6 +67,13 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
         timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS);
         loop.exec();
         timeoutTimer.stop();
+        ActiveReply = nullptr;
+
+        if (RequestSessionCanceled)
+        {
+            nh_log("HTTP GET canceled during request for %s", qPrintable(currentUrl.toString()));
+            return false;
+        }
 
         if (timedOut)
         {

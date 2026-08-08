@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HttpClient.h"
 #include "UserConfig.h"
 
 class UpdateService
@@ -12,7 +13,7 @@ public:
         Updated,
     };
 
-    static Result Run(UserConfig& config);
+    static Result Run(UserConfig& config, HttpClient& httpClient);
 
 private:
     enum class PluginUpdateStatus
@@ -30,9 +31,9 @@ private:
 
     static QString MergeDirectoryPath();
     static bool PrepareMergeDirectory(const QString& mergeDirPath);
-    static PluginUpdateResult StagePluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
+    static PluginUpdateResult StagePluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin, const QString& mergeDirPath);
     static QString StageDirectoryForPlugin(const QString& pluginId);
-    static bool DownloadFile(const QString& url, const QString& outputPath);
+    static bool DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath);
     static bool ExtractArchive(const QString& archivePath, const QString& outputDir);
     static bool PublishMergedUpdate(const UserConfig& config, const QString& mergeDirPath);
     static QString MergedArchivePath();

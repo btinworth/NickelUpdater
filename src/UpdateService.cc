@@ -1,14 +1,13 @@
 #include "UpdateService.h"
 #include "Constants.h"
 #include "GitHubInterface.h"
-#include "HttpClient.h"
 #include "PluginRelease.h"
 #include <NickelHook.h>
 #include <QDir>
 #include <QFile>
 #include <QProcess>
 
-UpdateService::Result UpdateService::Run(UserConfig& config)
+UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
 {
     const auto mergeDirPath = MergeDirectoryPath();
     if (!PrepareMergeDirectory(mergeDirPath))
@@ -20,7 +19,7 @@ UpdateService::Result UpdateService::Run(UserConfig& config)
     bool hadFailures = false;
     for (const auto& plugin : config.GetPlugins())
     {
-        const auto result = StagePluginUpdate(plugin, mergeDirPath);
+        const auto result = StagePluginUpdate(httpClient, plugin, mergeDirPath);
         if (result.Status == PluginUpdateStatus::Failed)
         {
             hadFailures = true;
@@ -67,9 +66,9 @@ bool UpdateService::PrepareMergeDirectory(const QString& mergeDirPath)
     return true;
 }
 
-UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath)
+UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin, const QString& mergeDirPath)
 {
-    const auto release = GitHubInterface::GetLatestRelease(plugin.PluginId);
+    const auto release = GitHubInterface::GetLatestRelease(httpClient, plugin.PluginId);
     if (!release.IsValid())
     {
         nh_log("Failed to load latest release for %s", qPrintable(plugin.PluginId));
@@ -90,7 +89,7 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(const PluginC
     }
 
     const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
-    if (!DownloadFile(release.KoboRootUrl, stageFilePath))
+    if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath))
     {
         nh_log("Failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
         return {PluginUpdateStatus::Failed, {}};
@@ -111,10 +110,10 @@ QString UpdateService::StageDirectoryForPlugin(const QString& pluginId)
     return QDir(STAGING_DIR).filePath(pluginId);
 }
 
-bool UpdateService::DownloadFile(const QString& url, const QString& outputPath)
+bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath)
 {
     QByteArray output;
-    if (!HttpClient::Get(url, &output, "*/*"))
+    if (!httpClient.Get(url, &output, "*/*"))
     {
         return false;
     }
