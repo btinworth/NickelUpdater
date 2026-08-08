@@ -4,7 +4,6 @@
 #include <QByteArray>
 #include <QString>
 #include <QStringList>
-#include <QUrl>
 
 class Utilities
 {

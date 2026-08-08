@@ -3,7 +3,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QUrl>
 
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {

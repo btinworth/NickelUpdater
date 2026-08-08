@@ -1,11 +1,11 @@
 #pragma once
 
-extern const char* KOBOROOT_PATH;
+extern const char* const KOBOROOT_PATH;
 
-extern const char* NICKELUPDATER_TMPL;
+extern const char* const NICKELUPDATER_TMPL;
 
-extern const char* CONFIG_DIR;
-extern const char* NICKELUPDATER_CONF;
-extern const char* UNINSTALL_FLAG;
+extern const char* const CONFIG_DIR;
+extern const char* const NICKELUPDATER_CONF;
+extern const char* const UNINSTALL_FLAG;
 
-extern const char* STAGING_DIR;
+extern const char* const STAGING_DIR;

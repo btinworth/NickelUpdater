@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
+#include <QUrl>
 
 bool Utilities::RunProcess(const QString& program, const QStringList& args, QByteArray* output)
 {
