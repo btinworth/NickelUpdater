@@ -1,10 +1,12 @@
 #include "UserConfig.h"
 #include <QFile>
 #include <QSaveFile>
+#include <QSet>
 
 bool UserConfig::Load(const QString& path)
 {
     Plugins.clear();
+    QSet<QString> seenPluginIds;
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -30,20 +32,12 @@ bool UserConfig::Load(const QString& path)
         const auto pluginId = line.left(equals).trimmed();
         const auto installedVersion = line.mid(equals + 1).trimmed();
 
-        bool isDuplicate = false;
-        for (const auto& plugin : Plugins)
-        {
-            if (plugin.PluginId == pluginId)
-            {
-                isDuplicate = true;
-                break;
-            }
-        }
-
-        if (isDuplicate)
+        if (seenPluginIds.contains(pluginId))
         {
             continue;
         }
+
+        seenPluginIds.insert(pluginId);
 
         Plugins.push_back({pluginId, installedVersion});
     }

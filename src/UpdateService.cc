@@ -1,7 +1,6 @@
 #include "UpdateService.h"
 #include "Constants.h"
 #include "GitHubInterface.h"
-#include "PluginRelease.h"
 #include <NickelHook.h>
 #include <QDir>
 #include <QFile>

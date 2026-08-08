@@ -2,9 +2,8 @@
 
 #include <QByteArray>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QString>
-
-class QNetworkReply;
 
 class HttpClient
 {

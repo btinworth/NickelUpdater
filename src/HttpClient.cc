@@ -1,7 +1,6 @@
 #include "HttpClient.h"
 #include <NickelHook.h>
 #include <QEventLoop>
-#include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QScopedPointer>
