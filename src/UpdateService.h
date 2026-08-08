@@ -33,7 +33,6 @@ private:
     static PluginUpdateResult StagePluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
     static QString StageDirectoryForPlugin(const QString& pluginId);
     static bool DownloadFile(const QString& url, const QString& outputPath);
-    static bool HttpGet(const QString& url, QByteArray* output, const QByteArray& acceptHeader = "application/vnd.github+json");
     static bool ExtractArchive(const QString& archivePath, const QString& outputDir);
     static bool PublishMergedUpdate(const UserConfig& config, const QString& mergeDirPath);
     static QString MergedArchivePath();

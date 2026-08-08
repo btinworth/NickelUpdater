@@ -1,17 +1,12 @@
 #include "UpdateService.h"
 #include "Constants.h"
 #include "GitHubInterface.h"
+#include "HttpClient.h"
 #include "PluginRelease.h"
 #include <NickelHook.h>
 #include <QDir>
-#include <QEventLoop>
 #include <QFile>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
 #include <QProcess>
-#include <QScopedPointer>
-#include <QUrl>
 
 UpdateService::Result UpdateService::Run(UserConfig& config)
 {
@@ -117,7 +112,7 @@ QString UpdateService::StageDirectoryForPlugin(const QString& pluginId)
 bool UpdateService::DownloadFile(const QString& url, const QString& outputPath)
 {
     QByteArray output;
-    if (!HttpGet(url, &output, "*/*"))
+    if (!HttpClient::Get(url, &output, "*/*"))
     {
         return false;
     }
@@ -130,53 +125,6 @@ bool UpdateService::DownloadFile(const QString& url, const QString& outputPath)
     }
 
     return file.write(output) == output.size();
-}
-
-bool UpdateService::HttpGet(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
-{
-    static QNetworkAccessManager manager;
-
-    QUrl currentUrl = QUrl(url);
-    for (int redirectsRemaining = 5; redirectsRemaining > 0; --redirectsRemaining)
-    {
-        QNetworkRequest request(currentUrl);
-        request.setRawHeader("User-Agent", "NickelUpdater");
-        request.setRawHeader("Accept", acceptHeader);
-
-        QScopedPointer<QNetworkReply> reply(manager.get(request));
-        QEventLoop loop;
-        QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-
-        if (reply->error() != QNetworkReply::NoError)
-        {
-            nh_log("HTTP GET failed for %s: %s", qPrintable(currentUrl.toString()), qPrintable(reply->errorString()));
-            return false;
-        }
-
-        const auto redirectTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
-        if (redirectTarget.isEmpty())
-        {
-            const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            if (statusCode < 200 || statusCode >= 300)
-            {
-                nh_log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
-                return false;
-            }
-
-            if (output != nullptr)
-            {
-                *output = reply->readAll();
-            }
-
-            return true;
-        }
-
-        currentUrl = currentUrl.resolved(redirectTarget);
-    }
-
-    nh_log("Too many redirects for %s", qPrintable(url));
-    return false;
 }
 
 bool UpdateService::ExtractArchive(const QString& archivePath, const QString& outputDir)
