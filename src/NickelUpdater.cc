@@ -1,6 +1,6 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
-#include "GitHubInterface.h"
+#include "UpdateService.h"
 #include "UserConfig.h"
 #include "Utilities.h"
 #include <NickelHook.h>
@@ -25,20 +25,16 @@ void NickelUpdater::OnNetworkConnected()
 
     nh_log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(config.GetPlugins().size()));
 
-    const auto mergeDirPath = Utilities::MergeDirectoryPath();
-    if (!Utilities::PrepareMergeDirectory(mergeDirPath))
+    switch (UpdateService::Run(config))
     {
+    case UpdateService::Result::Failed:
         return;
-    }
-
-    if (!Utilities::ApplyPluginUpdates(config, mergeDirPath))
-    {
+    case UpdateService::Result::NoUpdates:
         nh_log("No updates to apply");
         return;
-    }
-
-    if (!Utilities::FinalizeAndApplyUpdates(config, mergeDirPath))
-    {
+    case UpdateService::Result::Updated:
+        break;
+    default:
         return;
     }
 
