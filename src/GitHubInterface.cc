@@ -6,9 +6,10 @@
 
 PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 {
+    const auto url = QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId);
+
     QByteArray output;
-    const bool ok = Utilities::HttpGet(QString("https://api.github.com/repos/%1/releases/latest").arg(pluginId), &output);
-    if (!ok)
+    if (!Utilities::HttpGet(url, &output))
     {
         return {};
     }
@@ -58,18 +59,13 @@ PluginRelease GitHubInterface::GetLatestRelease(const QString& pluginId)
 
 QString GitHubInterface::GetCommitHash(const QString& pluginId, const QString& tagName)
 {
+    const auto url = QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName);
+
     QByteArray output;
-    const bool ok = Utilities::HttpGet(QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName), &output);
-    if (!ok)
+    if (!Utilities::HttpGet(url, &output, "application/vnd.github.sha"))
     {
         return {};
     }
 
-    const auto document = QJsonDocument::fromJson(output);
-    if (!document.isObject())
-    {
-        return {};
-    }
-
-    return document.object().value("sha").toString();
+    return QString::fromUtf8(output).trimmed();
 }

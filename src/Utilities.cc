@@ -29,7 +29,7 @@ bool Utilities::RunProcess(const QString& program, const QStringList& args, QByt
     return true;
 }
 
-bool Utilities::HttpGet(const QString& url, QByteArray* output)
+bool Utilities::HttpGet(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
 {
     static QNetworkAccessManager manager;
 
@@ -38,7 +38,7 @@ bool Utilities::HttpGet(const QString& url, QByteArray* output)
     {
         QNetworkRequest request(currentUrl);
         request.setRawHeader("User-Agent", "NickelUpdater");
-        request.setRawHeader("Accept", "application/vnd.github+json");
+        request.setRawHeader("Accept", acceptHeader);
 
         QScopedPointer<QNetworkReply> reply(manager.get(request));
         QEventLoop loop;
@@ -79,7 +79,7 @@ bool Utilities::HttpGet(const QString& url, QByteArray* output)
 bool Utilities::DownloadFile(const QString& url, const QString& outputPath)
 {
     QByteArray output;
-    if (!HttpGet(url, &output))
+    if (!HttpGet(url, &output, "*/*"))
     {
         return false;
     }

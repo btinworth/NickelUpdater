@@ -18,7 +18,7 @@ public:
 
     static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
 
-    static bool HttpGet(const QString& url, QByteArray* output);
+    static bool HttpGet(const QString& url, QByteArray* output, const QByteArray& acceptHeader = "application/vnd.github+json");
 
 private:
     static QString ProcessPluginUpdate(const PluginConfigEntry& plugin, const QString& mergeDirPath);
