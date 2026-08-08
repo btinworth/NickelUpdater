@@ -17,11 +17,13 @@ UpdateService::Result UpdateService::Run(UserConfig& config)
     }
 
     bool hasUpdates = false;
+    bool hadFailures = false;
     for (const auto& plugin : config.GetPlugins())
     {
         const auto result = StagePluginUpdate(plugin, mergeDirPath);
         if (result.Status == PluginUpdateStatus::Failed)
         {
+            hadFailures = true;
             continue;
         }
 
@@ -36,7 +38,7 @@ UpdateService::Result UpdateService::Run(UserConfig& config)
 
     if (!hasUpdates)
     {
-        return Result::NoUpdates;
+        return hadFailures ? Result::Failed : Result::NoUpdates;
     }
 
     return PublishMergedUpdate(config, mergeDirPath) ? Result::Updated : Result::Failed;
