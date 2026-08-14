@@ -35,7 +35,8 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
     }
 
     QUrl currentUrl = QUrl(url);
-    for (int redirectsRemaining = 5; redirectsRemaining > 0; --redirectsRemaining)
+    const int maxRedirects = 5;
+    for (int redirectCount = 0; redirectCount <= maxRedirects; ++redirectCount)
     {
         if (RequestSessionCanceled)
         {
@@ -105,8 +106,18 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
         }
 
         currentUrl = currentUrl.resolved(redirectTarget);
+        if (currentUrl.scheme() != "https")
+        {
+            nh_log("Refusing redirect to non-https URL: %s", qPrintable(currentUrl.toString()));
+            return false;
+        }
+
+        if (redirectCount == maxRedirects)
+        {
+            nh_log("Too many redirects for %s", qPrintable(url));
+            return false;
+        }
     }
 
-    nh_log("Too many redirects for %s", qPrintable(url));
     return false;
 }
