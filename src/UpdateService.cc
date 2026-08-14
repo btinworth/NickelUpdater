@@ -2,6 +2,7 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include <NickelHook.h>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QProcess>
@@ -88,7 +89,7 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& h
     }
 
     const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
-    if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath))
+    if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath, release.AssetDigest))
     {
         nh_log("Failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
         QDir(stageDirPath).removeRecursively();
@@ -111,11 +112,17 @@ QString UpdateService::StageDirectoryForPlugin(const QString& pluginId)
     return QDir(STAGING_DIR).filePath(pluginId);
 }
 
-bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath)
+bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath, const QString& expectedDigest)
 {
     QByteArray output;
     if (!httpClient.Get(url, &output, "*/*"))
     {
+        return false;
+    }
+
+    if (!VerifyDigest(output, expectedDigest))
+    {
+        nh_log("Digest mismatch for %s", qPrintable(url));
         return false;
     }
 
@@ -127,6 +134,31 @@ bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, con
     }
 
     return file.write(output) == output.size();
+}
+
+bool UpdateService::VerifyDigest(const QByteArray& data, const QString& expectedDigest)
+{
+    if (expectedDigest.isEmpty())
+    {
+        return true;
+    }
+
+    const auto separator = expectedDigest.indexOf(':');
+    if (separator < 0)
+    {
+        return false;
+    }
+
+    const auto algorithm = expectedDigest.left(separator);
+    const auto expectedHex = expectedDigest.mid(separator + 1);
+    if (algorithm != "sha256")
+    {
+        nh_log("Unsupported digest algorithm: %s", qPrintable(algorithm));
+        return false;
+    }
+
+    const auto actualHex = QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex();
+    return QString::fromLatin1(actualHex).compare(expectedHex, Qt::CaseInsensitive) == 0;
 }
 
 bool UpdateService::ExtractArchive(const QString& archivePath, const QString& outputDir)
