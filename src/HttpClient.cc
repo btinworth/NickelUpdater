@@ -15,6 +15,7 @@ const int HTTP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 void HttpClient::BeginSession()
 {
     RequestSessionCanceled = false;
+    RateLimited = false;
 }
 
 void HttpClient::CancelSession()
@@ -24,6 +25,11 @@ void HttpClient::CancelSession()
     {
         ActiveReply->abort();
     }
+}
+
+bool HttpClient::IsRateLimited() const
+{
+    return RateLimited;
 }
 
 bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
@@ -93,7 +99,15 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
             const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             if (statusCode < 200 || statusCode >= 300)
             {
-                nh_log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
+                if ((statusCode == 403 || statusCode == 429) && reply->rawHeader("x-ratelimit-remaining") == "0")
+                {
+                    RateLimited = true;
+                    nh_log("HTTP GET rate limited for %s (resets at epoch %s)", qPrintable(currentUrl.toString()), reply->rawHeader("x-ratelimit-reset").constData());
+                }
+                else
+                {
+                    nh_log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
+                }
                 return false;
             }
 

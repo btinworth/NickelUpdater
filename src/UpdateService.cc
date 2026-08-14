@@ -23,6 +23,11 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
         if (result.Status == PluginUpdateStatus::Failed)
         {
             hadFailures = true;
+            if (httpClient.IsRateLimited())
+            {
+                nh_log("Stopping update: GitHub API rate limit hit");
+                break;
+            }
             continue;
         }
 
