@@ -180,6 +180,7 @@ bool UpdateService::RunProcess(const QString& program, const QStringList& args, 
     process.start(program, args);
     if (!process.waitForFinished(-1) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
     {
+        nh_log("%s %s failed (exit code %d): %s", qPrintable(program), qPrintable(args.join(' ')), process.exitCode(), process.readAllStandardError().constData());
         return false;
     }
 
