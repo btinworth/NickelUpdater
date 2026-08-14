@@ -91,12 +91,14 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& h
     if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath))
     {
         nh_log("Failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+        QDir(stageDirPath).removeRecursively();
         return {PluginUpdateStatus::Failed, {}};
     }
 
     if (!ExtractArchive(stageFilePath, mergeDirPath))
     {
         nh_log("Failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
+        QDir(stageDirPath).removeRecursively();
         return {PluginUpdateStatus::Failed, {}};
     }
 
