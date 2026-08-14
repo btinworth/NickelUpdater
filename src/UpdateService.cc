@@ -2,14 +2,13 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include <NickelHook.h>
-#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QProcess>
 
 UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
 {
-    const auto mergeDirPath = MergeDirectoryPath();
+    const auto mergeDirPath = QDir(STAGING_DIR).filePath("_merged_root");
     if (!PrepareMergeDirectory(mergeDirPath))
     {
         return Result::Failed;
@@ -23,11 +22,6 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
         if (result.Status == PluginUpdateStatus::Failed)
         {
             hadFailures = true;
-            if (httpClient.IsRateLimited())
-            {
-                nh_log("Stopping update: GitHub API rate limit hit");
-                break;
-            }
             continue;
         }
 
@@ -46,11 +40,6 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
     }
 
     return PublishMergedUpdate(config, mergeDirPath) ? Result::Updated : Result::Failed;
-}
-
-QString UpdateService::MergeDirectoryPath()
-{
-    return QDir(STAGING_DIR).filePath("_merged_root");
 }
 
 bool UpdateService::PrepareMergeDirectory(const QString& mergeDirPath)
@@ -86,7 +75,7 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& h
         return {PluginUpdateStatus::Unchanged, {}};
     }
 
-    const auto stageDirPath = StageDirectoryForPlugin(plugin.PluginId);
+    const auto stageDirPath = QDir(STAGING_DIR).filePath(plugin.PluginId);
     if (!QDir().mkpath(stageDirPath))
     {
         nh_log("Failed to create stage dir for %s", qPrintable(plugin.PluginId));
@@ -94,14 +83,14 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& h
     }
 
     const auto stageFilePath = QDir(stageDirPath).filePath("KoboRoot.tgz");
-    if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath, release.AssetDigest))
+    if (!DownloadFile(httpClient, release.KoboRootUrl, stageFilePath))
     {
         nh_log("Failed to download KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
         QDir(stageDirPath).removeRecursively();
         return {PluginUpdateStatus::Failed, {}};
     }
 
-    if (!ExtractArchive(stageFilePath, mergeDirPath))
+    if (!RunProcess("tar", {"-xzf", stageFilePath, "-C", mergeDirPath}))
     {
         nh_log("Failed to extract KoboRoot.tgz for %s", qPrintable(plugin.PluginId));
         QDir(stageDirPath).removeRecursively();
@@ -112,22 +101,11 @@ UpdateService::PluginUpdateResult UpdateService::StagePluginUpdate(HttpClient& h
     return {PluginUpdateStatus::Updated, release.TagName};
 }
 
-QString UpdateService::StageDirectoryForPlugin(const QString& pluginId)
-{
-    return QDir(STAGING_DIR).filePath(pluginId);
-}
-
-bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath, const QString& expectedDigest)
+bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath)
 {
     QByteArray output;
     if (!httpClient.Get(url, &output, "*/*"))
     {
-        return false;
-    }
-
-    if (!VerifyDigest(output, expectedDigest))
-    {
-        nh_log("Digest mismatch for %s", qPrintable(url));
         return false;
     }
 
@@ -141,46 +119,18 @@ bool UpdateService::DownloadFile(HttpClient& httpClient, const QString& url, con
     return file.write(output) == output.size();
 }
 
-bool UpdateService::VerifyDigest(const QByteArray& data, const QString& expectedDigest)
-{
-    if (expectedDigest.isEmpty())
-    {
-        return true;
-    }
-
-    const auto separator = expectedDigest.indexOf(':');
-    if (separator < 0)
-    {
-        return false;
-    }
-
-    const auto algorithm = expectedDigest.left(separator);
-    const auto expectedHex = expectedDigest.mid(separator + 1);
-    if (algorithm != "sha256")
-    {
-        nh_log("Unsupported digest algorithm: %s", qPrintable(algorithm));
-        return false;
-    }
-
-    const auto actualHex = QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex();
-    return QString::fromLatin1(actualHex).compare(expectedHex, Qt::CaseInsensitive) == 0;
-}
-
-bool UpdateService::ExtractArchive(const QString& archivePath, const QString& outputDir)
-{
-    return RunProcess("tar", {"-xzf", archivePath, "-C", outputDir});
-}
-
 bool UpdateService::PublishMergedUpdate(const UserConfig& config, const QString& mergeDirPath)
 {
-    const auto mergedArchivePath = MergedArchivePath();
-    if (!CreateArchive(mergeDirPath, mergedArchivePath))
+    const auto mergedArchivePath = QDir(STAGING_DIR).filePath("KoboRoot.merged.tgz");
+    QFile::remove(mergedArchivePath);
+    if (!RunProcess("tar", {"-czf", mergedArchivePath, "-C", mergeDirPath, "."}))
     {
         nh_log("Failed to create merged KoboRoot.tgz");
         return false;
     }
 
-    if (!PublishArchive(mergedArchivePath))
+    QFile::remove(KOBOROOT_PATH);
+    if (!QFile::copy(mergedArchivePath, KOBOROOT_PATH))
     {
         nh_log("Failed to publish merged KoboRoot.tgz");
         return false;
@@ -192,7 +142,7 @@ bool UpdateService::PublishMergedUpdate(const UserConfig& config, const QString&
         return false;
     }
 
-    if (!RebootDevice())
+    if (!QProcess::startDetached("reboot"))
     {
         nh_log("Failed to reboot after publishing merged KoboRoot.tgz");
         return false;
@@ -200,17 +150,6 @@ bool UpdateService::PublishMergedUpdate(const UserConfig& config, const QString&
 
     nh_log("Published merged KoboRoot.tgz");
     return true;
-}
-
-QString UpdateService::MergedArchivePath()
-{
-    return QDir(STAGING_DIR).filePath("KoboRoot.merged.tgz");
-}
-
-bool UpdateService::CreateArchive(const QString& sourceDir, const QString& archivePath)
-{
-    QFile::remove(archivePath);
-    return RunProcess("tar", {"-czf", archivePath, "-C", sourceDir, "."});
 }
 
 bool UpdateService::RunProcess(const QString& program, const QStringList& args, QByteArray* output)
@@ -229,15 +168,4 @@ bool UpdateService::RunProcess(const QString& program, const QStringList& args, 
     }
 
     return true;
-}
-
-bool UpdateService::PublishArchive(const QString& archivePath)
-{
-    QFile::remove(KOBOROOT_PATH);
-    return QFile::copy(archivePath, KOBOROOT_PATH);
-}
-
-bool UpdateService::RebootDevice()
-{
-    return QProcess::startDetached("reboot");
 }

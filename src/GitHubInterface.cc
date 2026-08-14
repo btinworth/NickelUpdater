@@ -49,7 +49,6 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
 
         PluginRelease release;
         release.KoboRootUrl = assetObject.value("browser_download_url").toString();
-        release.AssetDigest = assetObject.value("digest").toString();
         release.TagName = QString("%1@%2").arg(tagName, commitHash);
         return release;
     }
