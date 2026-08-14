@@ -9,7 +9,7 @@
 
 namespace
 {
-const int HTTP_REQUEST_TIMEOUT_MS = 15000;
+const int HTTP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 }
 
 void HttpClient::BeginSession()
