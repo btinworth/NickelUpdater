@@ -10,6 +10,7 @@ class HttpClient
 public:
     void BeginSession();
     void CancelSession();
+    bool IsSessionCanceled() const;
     bool Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader = "application/vnd.github+json");
 
 private:

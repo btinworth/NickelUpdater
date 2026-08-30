@@ -26,6 +26,11 @@ void HttpClient::CancelSession()
     }
 }
 
+bool HttpClient::IsSessionCanceled() const
+{
+    return RequestSessionCanceled;
+}
+
 bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader)
 {
     if (RequestSessionCanceled)

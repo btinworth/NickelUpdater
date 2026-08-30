@@ -39,6 +39,13 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
         return hadFailures ? Result::Failed : Result::NoUpdates;
     }
 
+    // publishing reboots the device, so never do it from a half finished merge
+    if (httpClient.IsSessionCanceled())
+    {
+        Log("Session canceled; not publishing a partial update");
+        return Result::Failed;
+    }
+
     return PublishMergedUpdate(config, mergeDirPath) ? Result::Updated : Result::Failed;
 }
 

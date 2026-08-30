@@ -7,15 +7,22 @@
 #include <QFile>
 
 QObject* (*WirelessManagerInstance)() = nullptr;
+QObject* (*PlugWorkflowManagerInstance)() = nullptr;
 
 NickelUpdater::NickelUpdater()
-    : IsUpdating(false)
+    : IsUpdating(false), UsbConnected(false)
 {
     CreateConfig(NICKELUPDATER_CONF, NICKELUPDATER_TMPL);
 }
 
 void NickelUpdater::OnNetworkConnected()
 {
+    if (UsbConnected)
+    {
+        Log("USB connected; skipping new network-connected trigger");
+        return;
+    }
+
     if (IsUpdating)
     {
         Log("Update already in progress; skipping new network-connected trigger");
@@ -64,6 +71,23 @@ void NickelUpdater::OnNetworkDisconnected()
     {
         Log("Network disconnected; canceling active update");
     }
+}
+
+void NickelUpdater::OnUsbConnecting()
+{
+    // onboard is about to be handed to the host, so nothing under it stays writable
+    UsbConnected = true;
+    Client.CancelSession();
+
+    if (IsUpdating)
+    {
+        Log("USB connecting; canceling active update");
+    }
+}
+
+void NickelUpdater::OnUsbDoneProcessing()
+{
+    UsbConnected = false;
 }
 
 void NickelUpdater::CreateConfig(const char* filePath, const char* tmplFilePath)

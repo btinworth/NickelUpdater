@@ -22,6 +22,18 @@ static int NickelUpdaterInit()
         return 1;
     }
 
+    // without this an update could write KoboRoot.tgz while nickel hands the partition to the host
+    auto* pwm = PlugWorkflowManagerInstance();
+    if (pwm != nullptr)
+    {
+        QObject::connect(pwm, SIGNAL(aboutToConnect()), &nickelUpdater, SLOT(OnUsbConnecting()), Qt::UniqueConnection);
+        QObject::connect(pwm, SIGNAL(doneProcessing()), &nickelUpdater, SLOT(OnUsbDoneProcessing()), Qt::UniqueConnection);
+    }
+    else
+    {
+        Log("Could not get PlugWorkflowManager instance, updates will not pause for USB");
+    }
+
     return 0;
 }
 
@@ -52,6 +64,11 @@ static struct nh_dlsym NickelUpdaterDlsym[] = {
         .name = "_ZN15WirelessManager14sharedInstanceEv",
         .out = nh_symoutptr(WirelessManagerInstance),
         .desc = "WirelessManager::sharedInstance",
+    },
+    {
+        .name = "_ZN19PlugWorkflowManager14sharedInstanceEv",
+        .out = nh_symoutptr(PlugWorkflowManagerInstance),
+        .desc = "PlugWorkflowManager::sharedInstance",
     },
     {0},
 };
