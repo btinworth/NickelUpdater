@@ -14,7 +14,7 @@ class UserConfig
 public:
     bool Load(const QString& path);
     bool Save(const QString& path) const;
-    bool SetTag(const QString& pluginId, const QString& tagName);
+    void SetTag(const QString& pluginId, const QString& tagName);
 
     const QVector<PluginConfigEntry>& GetPlugins() const;
 

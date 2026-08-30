@@ -22,6 +22,8 @@ Add one plugin per line:
 
 Keep `installed_tag@installed_commit` blank on first install. NickelUpdater fills it in after each successful update.
 
+Plugins are checked in the order they are listed, and only one plugin is updated per run. Any remaining plugins are picked up on the next network connection.
+
 ```conf
 # NickelUpdater configuration
 # Format: owner/repo = installed_tag@installed_commit

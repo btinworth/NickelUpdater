@@ -63,18 +63,16 @@ bool UserConfig::Save(const QString& path) const
     return file.commit();
 }
 
-bool UserConfig::SetTag(const QString& pluginId, const QString& tagName)
+void UserConfig::SetTag(const QString& pluginId, const QString& tagName)
 {
     for (auto& plugin : Plugins)
     {
         if (plugin.PluginId == pluginId)
         {
             plugin.TagName = tagName;
-            return true;
+            return;
         }
     }
-
-    return false;
 }
 
 const QVector<PluginConfigEntry>& UserConfig::GetPlugins() const

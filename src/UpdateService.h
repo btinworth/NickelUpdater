@@ -27,11 +27,9 @@ private:
     {
         PluginUpdateStatus Status;
         QString TagName;
+        QByteArray Archive;
     };
 
-    static bool PrepareMergeDirectory(const QString& mergeDirPath);
-    static PluginUpdateResult StagePluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin, const QString& mergeDirPath);
-    static bool DownloadFile(HttpClient& httpClient, const QString& url, const QString& outputPath);
-    static bool PublishMergedUpdate(const UserConfig& config, const QString& mergeDirPath);
-    static bool RunProcess(const QString& program, const QStringList& args, QByteArray* output = nullptr);
+    static PluginUpdateResult DownloadPluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin);
+    static bool PublishUpdate(const UserConfig& config, const QByteArray& archive);
 };

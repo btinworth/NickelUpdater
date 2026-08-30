@@ -86,11 +86,13 @@ void ConfigParseTest::updatesInstalledVersion()
         "pgaskin/NickelMenu = v1.0.0\n"
         "bobo/example-plugin =\n");
 
-    QVERIFY(config.SetTag("bobo/example-plugin", "v2.0.0"));
+    config.SetTag("bobo/example-plugin", "v2.0.0");
     const auto& plugins = config.GetPlugins();
     QCOMPARE(plugins.at(0).TagName, QString("v1.0.0"));
     QCOMPARE(plugins.at(1).TagName, QString("v2.0.0"));
-    QVERIFY(!config.SetTag("missing/repo", "v1"));
+
+    config.SetTag("missing/repo", "v1");
+    QCOMPARE(plugins.size(), 2);
 }
 
 void ConfigParseTest::loadReturnsFalseForMissingFile()

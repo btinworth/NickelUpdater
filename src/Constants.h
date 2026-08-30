@@ -10,5 +10,3 @@ extern const char* const NICKELUPDATER_CONF;
 extern const char* const NICKELUPDATER_LOG;
 extern const char* const NICKELUPDATER_LOG_OLD;
 extern const char* const UNINSTALL_FLAG;
-
-extern const char* const STAGING_DIR;

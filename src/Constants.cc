@@ -10,5 +10,3 @@ const char* const NICKELUPDATER_CONF = "/mnt/onboard/.adds/nickelupdater/nickelu
 const char* const NICKELUPDATER_LOG = "/mnt/onboard/.adds/nickelupdater/nickelupdater.log";
 const char* const NICKELUPDATER_LOG_OLD = "/mnt/onboard/.adds/nickelupdater/nickelupdater.log.old";
 const char* const UNINSTALL_FLAG = "/mnt/onboard/.adds/nickelupdater/uninstall";
-
-const char* const STAGING_DIR = "/tmp/nickelupdater";
