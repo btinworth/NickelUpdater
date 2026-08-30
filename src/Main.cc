@@ -8,16 +8,20 @@ static int NickelUpdaterInit()
 {
     SetLogEnabled(true);
 
+    static NickelUpdater nickelUpdater;
+
     auto* wm = WirelessManagerInstance();
-    if (wm == nullptr)
+    if (wm != nullptr)
+    {
+        QObject::connect(wm, SIGNAL(networkConnected()), &nickelUpdater, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
+        QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelUpdater, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
+    }
+    else
     {
         Log("Could not get WirelessManager instance");
-        return 0;
+        return 1;
     }
 
-    static NickelUpdater nickelUpdater;
-    QObject::connect(wm, SIGNAL(networkConnected()), &nickelUpdater, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
-    QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelUpdater, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
     return 0;
 }
 
