@@ -1,14 +1,17 @@
 #include "Constants.h"
+#include "Log.h"
 #include "NickelUpdater.h"
 #include <NickelHook.h>
 #include <QDir>
 
 static int NickelUpdaterInit()
 {
+    SetLogEnabled(true);
+
     auto* wm = WirelessManagerInstance();
     if (wm == nullptr)
     {
-        nh_log("Could not get WirelessManager instance");
+        Log("Could not get WirelessManager instance");
         return 0;
     }
 
@@ -20,7 +23,7 @@ static int NickelUpdaterInit()
 
 static bool NickelUpdaterUninstall()
 {
-    nh_log("Removing NickelUpdater config and program files");
+    Log("Removing NickelUpdater config and program files");
 
     const char* const dirs[] = {CONFIG_DIR, INSTALL_DIR};
 

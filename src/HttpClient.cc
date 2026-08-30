@@ -1,5 +1,5 @@
 #include "HttpClient.h"
-#include <NickelHook.h>
+#include "Log.h"
 #include <QEventLoop>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -30,7 +30,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
 {
     if (RequestSessionCanceled)
     {
-        nh_log("HTTP GET canceled before request for %s", qPrintable(url));
+        Log("HTTP GET canceled before request for %s", qPrintable(url));
         return false;
     }
 
@@ -40,7 +40,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
     {
         if (RequestSessionCanceled)
         {
-            nh_log("HTTP GET canceled before request for %s", qPrintable(currentUrl.toString()));
+            Log("HTTP GET canceled before request for %s", qPrintable(currentUrl.toString()));
             return false;
         }
 
@@ -71,19 +71,19 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
 
         if (RequestSessionCanceled)
         {
-            nh_log("HTTP GET canceled during request for %s", qPrintable(currentUrl.toString()));
+            Log("HTTP GET canceled during request for %s", qPrintable(currentUrl.toString()));
             return false;
         }
 
         if (timedOut)
         {
-            nh_log("HTTP GET timed out after %d ms for %s", HTTP_REQUEST_TIMEOUT_MS, qPrintable(currentUrl.toString()));
+            Log("HTTP GET timed out after %d ms for %s", HTTP_REQUEST_TIMEOUT_MS, qPrintable(currentUrl.toString()));
             return false;
         }
 
         if (reply->error() != QNetworkReply::NoError)
         {
-            nh_log("HTTP GET failed for %s: %s", qPrintable(currentUrl.toString()), qPrintable(reply->errorString()));
+            Log("HTTP GET failed for %s: %s", qPrintable(currentUrl.toString()), qPrintable(reply->errorString()));
             return false;
         }
 
@@ -93,7 +93,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
             const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             if (statusCode < 200 || statusCode >= 300)
             {
-                nh_log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
+                Log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
                 return false;
             }
 
@@ -108,13 +108,13 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
         currentUrl = currentUrl.resolved(redirectTarget);
         if (currentUrl.scheme() != "https")
         {
-            nh_log("Refusing redirect to non-https URL: %s", qPrintable(currentUrl.toString()));
+            Log("Refusing redirect to non-https URL: %s", qPrintable(currentUrl.toString()));
             return false;
         }
 
         if (redirectCount == maxRedirects)
         {
-            nh_log("Too many redirects for %s", qPrintable(url));
+            Log("Too many redirects for %s", qPrintable(url));
             return false;
         }
     }
