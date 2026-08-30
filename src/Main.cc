@@ -1,6 +1,7 @@
 #include "Constants.h"
 #include "NickelUpdater.h"
 #include <NickelHook.h>
+#include <QDir>
 
 static int NickelUpdaterInit()
 {
@@ -15,6 +16,22 @@ static int NickelUpdaterInit()
     QObject::connect(wm, SIGNAL(networkConnected()), &nickelUpdater, SLOT(OnNetworkConnected()), Qt::UniqueConnection);
     QObject::connect(wm, SIGNAL(networkDisconnected()), &nickelUpdater, SLOT(OnNetworkDisconnected()), Qt::UniqueConnection);
     return 0;
+}
+
+static bool NickelUpdaterUninstall()
+{
+    nh_log("Removing NickelUpdater config and program files");
+
+    const char* const dirs[] = {CONFIG_DIR, INSTALL_DIR};
+
+    auto deleted = true;
+    for (const auto* path : dirs)
+    {
+        QDir dir(path);
+        deleted &= !dir.exists() || dir.removeRecursively();
+    }
+
+    return deleted;
 }
 
 static struct nh_info NickelUpdaterInfo = {
@@ -37,4 +54,5 @@ NickelHook(
     .info = &NickelUpdaterInfo,
     .hook = nullptr,
     .dlsym = NickelUpdaterDlsym,
+    .uninstall = NickelUpdaterUninstall,
 )
