@@ -6,11 +6,14 @@
 #include <QFile>
 #include <QProcess>
 #include <QSaveFile>
+#include <QTextStream>
 #include <cstring>
 #include <unistd.h>
 
 UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
 {
+    ResolvePendingUpdate(config);
+
     // defer if KoboRoot.tgz already exists
     if (QFile::exists(KOBOROOT_PATH))
     {
@@ -41,11 +44,36 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
             return Result::Failed;
         }
 
-        config.SetTag(plugin.PluginId, result.TagName);
-        return PublishUpdate(config, result.Archive) ? Result::Updated : Result::Failed;
+        return PublishUpdate(plugin.PluginId, result.TagName, result.Archive) ? Result::Updated : Result::Failed;
     }
 
     return hadFailures ? Result::Failed : Result::NoUpdates;
+}
+
+void UpdateService::ResolvePendingUpdate(UserConfig& config)
+{
+    QString pluginId;
+    QString tagName;
+    if (!ReadPendingUpdate(&pluginId, &tagName))
+    {
+        return;
+    }
+
+    if (QFile::exists(KOBOROOT_PATH))
+    {
+        // still waiting to be installed
+        return;
+    }
+
+    config.SetTag(pluginId, tagName);
+    if (!config.Save(NICKELUPDATER_CONF))
+    {
+        Log("Failed to save confirmed update for %s", qPrintable(pluginId));
+        return;
+    }
+
+    Log("Confirmed %s installed at %s", qPrintable(pluginId), qPrintable(tagName));
+    ClearPendingUpdate();
 }
 
 UpdateService::PluginUpdateResult UpdateService::DownloadPluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin)
@@ -108,7 +136,7 @@ bool UpdateService::IsValidArchive(const PluginRelease& release, const QByteArra
     return true;
 }
 
-bool UpdateService::PublishUpdate(const UserConfig& config, const QByteArray& archive)
+bool UpdateService::PublishUpdate(const QString& pluginId, const QString& tagName, const QByteArray& archive)
 {
     QSaveFile file(KOBOROOT_PATH);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(archive) != archive.size() || !file.flush())
@@ -124,9 +152,10 @@ bool UpdateService::PublishUpdate(const UserConfig& config, const QByteArray& ar
         return false;
     }
 
-    if (!config.Save(NICKELUPDATER_CONF))
+    // the config tag is only updated once the install is confirmed on a later run, so a bad install can't be recorded as success
+    if (!WritePendingUpdate(pluginId, tagName))
     {
-        Log("Failed to save updated tags");
+        Log("Failed to save pending update state");
         return false;
     }
 
@@ -141,4 +170,43 @@ bool UpdateService::PublishUpdate(const UserConfig& config, const QByteArray& ar
 
     Log("Published KoboRoot.tgz");
     return true;
+}
+
+bool UpdateService::ReadPendingUpdate(QString* pluginId, QString* tagName)
+{
+    QFile file(NICKELUPDATER_PENDING);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return false;
+    }
+
+    const auto lines = QString::fromUtf8(file.readAll()).split('\n');
+    if (lines.size() < 2 || lines[0].isEmpty() || lines[1].isEmpty())
+    {
+        return false;
+    }
+
+    *pluginId = lines[0];
+    *tagName = lines[1];
+    return true;
+}
+
+bool UpdateService::WritePendingUpdate(const QString& pluginId, const QString& tagName)
+{
+    QSaveFile file(NICKELUPDATER_PENDING);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        return false;
+    }
+
+    QTextStream out(&file);
+    out << pluginId << "\n" << tagName << "\n";
+    out.flush();
+
+    return file.flush() && fsync(file.handle()) == 0 && file.commit();
+}
+
+void UpdateService::ClearPendingUpdate()
+{
+    QFile::remove(NICKELUPDATER_PENDING);
 }

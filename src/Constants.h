@@ -7,6 +7,7 @@ extern const char* const NICKELUPDATER_TMPL;
 extern const char* const INSTALL_DIR;
 extern const char* const CONFIG_DIR;
 extern const char* const NICKELUPDATER_CONF;
+extern const char* const NICKELUPDATER_PENDING;
 extern const char* const NICKELUPDATER_LOG;
 extern const char* const NICKELUPDATER_LOG_OLD;
 extern const char* const UNINSTALL_FLAG;
