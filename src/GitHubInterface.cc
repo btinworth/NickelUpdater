@@ -50,6 +50,15 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
         PluginRelease release;
         release.KoboRootUrl = assetObject.value("browser_download_url").toString();
         release.TagName = QString("%1@%2").arg(tagName, commitHash);
+        release.Size = static_cast<qint64>(assetObject.value("size").toDouble());
+
+        // "digest" is only present for assets uploaded after GitHub added checksums; format is "sha256:<hex>"
+        const auto digest = assetObject.value("digest").toString();
+        if (digest.startsWith("sha256:"))
+        {
+            release.Sha256Digest = digest.mid(7);
+        }
+
         return release;
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HttpClient.h"
+#include "PluginRelease.h"
 #include "UserConfig.h"
 
 class UpdateService
@@ -32,5 +33,6 @@ private:
     };
 
     static PluginUpdateResult DownloadPluginUpdate(HttpClient& httpClient, const PluginConfigEntry& plugin);
+    static bool IsValidArchive(const PluginRelease& release, const QByteArray& archive);
     static bool PublishUpdate(const UserConfig& config, const QByteArray& archive);
 };
