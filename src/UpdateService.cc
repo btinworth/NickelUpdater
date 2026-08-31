@@ -196,7 +196,8 @@ bool UpdateService::WritePendingUpdate(const QString& pluginId, const QString& t
     }
 
     QTextStream out(&file);
-    out << pluginId << "\n" << tagName << "\n";
+    out << pluginId << "\n"
+        << tagName << "\n";
     out.flush();
 
     return file.flush() && fsync(file.handle()) == 0 && file.commit();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QMetaType>
 #include <QString>
 #include <QVector>
 
@@ -23,3 +24,5 @@ private:
 
     QVector<PluginConfigEntry> Plugins;
 };
+
+Q_DECLARE_METATYPE(UserConfig)

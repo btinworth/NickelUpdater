@@ -9,6 +9,7 @@ class HttpClient
 {
 public:
     HttpClient();
+    ~HttpClient();
 
     void BeginSession();
     void CancelSession();
@@ -16,7 +17,10 @@ public:
     bool Get(const QString& url, QByteArray* output, const QByteArray& acceptHeader = "application/vnd.github+json");
 
 private:
+    // created lazily on first use, so it picks up the thread affinity of whichever thread actually makes requests
+    QNetworkAccessManager& GetManager();
+
     bool RequestSessionCanceled = false;
     QNetworkReply* ActiveReply = nullptr;
-    QNetworkAccessManager Manager;
+    QNetworkAccessManager* Manager = nullptr;
 };

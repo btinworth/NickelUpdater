@@ -3,6 +3,7 @@
 #include "HttpClient.h"
 #include "PluginRelease.h"
 #include "UserConfig.h"
+#include <QMetaType>
 
 class UpdateService
 {
@@ -42,3 +43,5 @@ private:
     static bool WritePendingUpdate(const QString& pluginId, const QString& tagName);
     static void ClearPendingUpdate();
 };
+
+Q_DECLARE_METATYPE(UpdateService::Result)

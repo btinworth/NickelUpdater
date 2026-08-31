@@ -1,10 +1,13 @@
 #pragma once
 
-#include "HttpClient.h"
+#include "UpdateService.h"
 #include <QObject>
+#include <QThread>
 
 extern QObject* (*WirelessManagerInstance)();
 extern QObject* (*PlugWorkflowManagerInstance)();
+
+class UpdateWorker;
 
 class NickelUpdater : public QObject
 {
@@ -12,6 +15,7 @@ class NickelUpdater : public QObject
 
 public:
     NickelUpdater();
+    ~NickelUpdater() override;
 
 public slots:
     void OnNetworkConnected();
@@ -19,10 +23,18 @@ public slots:
     void OnUsbConnecting();
     void OnUsbDoneProcessing();
 
+signals:
+    void RequestUpdate(UserConfig config);
+    void RequestCancel();
+
+private slots:
+    void OnUpdateFinished(UpdateService::Result result);
+
 private:
-    HttpClient Client;
     bool IsUpdating;
     bool UsbConnected;
+    QThread WorkerThread;
+    UpdateWorker* Worker;
 
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
 };

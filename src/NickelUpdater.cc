@@ -1,8 +1,7 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
 #include "Log.h"
-#include "UpdateService.h"
-#include "UserConfig.h"
+#include "UpdateWorker.h"
 #include <QDir>
 #include <QFile>
 
@@ -10,9 +9,26 @@ QObject* (*WirelessManagerInstance)() = nullptr;
 QObject* (*PlugWorkflowManagerInstance)() = nullptr;
 
 NickelUpdater::NickelUpdater()
-    : IsUpdating(false), UsbConnected(false)
+    : IsUpdating(false), UsbConnected(false), Worker(new UpdateWorker())
 {
+    qRegisterMetaType<UserConfig>();
+    qRegisterMetaType<UpdateService::Result>();
+
     CreateConfig(NICKELUPDATER_CONF, NICKELUPDATER_TMPL);
+
+    // the worker owns its own HttpClient/QNetworkAccessManager so its blocking network calls never stall this (nickel's GUI) thread
+    Worker->moveToThread(&WorkerThread);
+    connect(&WorkerThread, &QThread::finished, Worker, &QObject::deleteLater);
+    connect(this, &NickelUpdater::RequestUpdate, Worker, &UpdateWorker::Run);
+    connect(this, &NickelUpdater::RequestCancel, Worker, &UpdateWorker::Cancel);
+    connect(Worker, &UpdateWorker::Finished, this, &NickelUpdater::OnUpdateFinished);
+    WorkerThread.start();
+}
+
+NickelUpdater::~NickelUpdater()
+{
+    WorkerThread.quit();
+    WorkerThread.wait();
 }
 
 void NickelUpdater::OnNetworkConnected()
@@ -29,23 +45,22 @@ void NickelUpdater::OnNetworkConnected()
         return;
     }
 
-    IsUpdating = true;
-    Client.BeginSession();
-
-    Log("Starting update");
-
-    auto result = UpdateService::Result::Failed;
     UserConfig config;
     if (!config.Load(NICKELUPDATER_CONF))
     {
         Log("Failed to open config: %s", NICKELUPDATER_CONF);
-    }
-    else
-    {
-        Log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(config.GetPlugins().size()));
-        result = UpdateService::Run(config, Client);
+        return;
     }
 
+    Log("Config loaded from %s (%lld plugin(s))", NICKELUPDATER_CONF, static_cast<long long>(config.GetPlugins().size()));
+
+    IsUpdating = true;
+    Log("Starting update");
+    emit RequestUpdate(config);
+}
+
+void NickelUpdater::OnUpdateFinished(UpdateService::Result result)
+{
     switch (result)
     {
     case UpdateService::Result::Failed:
@@ -66,24 +81,25 @@ void NickelUpdater::OnNetworkConnected()
 
 void NickelUpdater::OnNetworkDisconnected()
 {
-    Client.CancelSession();
-
     if (IsUpdating)
     {
         Log("Network disconnected; canceling active update");
     }
+
+    emit RequestCancel();
 }
 
 void NickelUpdater::OnUsbConnecting()
 {
     // onboard is about to be handed to the host, so nothing under it stays writable
     UsbConnected = true;
-    Client.CancelSession();
 
     if (IsUpdating)
     {
         Log("USB connecting; canceling active update");
     }
+
+    emit RequestCancel();
 }
 
 void NickelUpdater::OnUsbDoneProcessing()

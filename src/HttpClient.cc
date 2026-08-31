@@ -19,6 +19,21 @@ HttpClient::HttpClient()
     Log("TLS support: %s (library: %s)", QSslSocket::supportsSsl() ? "yes" : "no", qPrintable(QSslSocket::sslLibraryVersionString()));
 }
 
+HttpClient::~HttpClient()
+{
+    delete Manager;
+}
+
+QNetworkAccessManager& HttpClient::GetManager()
+{
+    if (Manager == nullptr)
+    {
+        Manager = new QNetworkAccessManager();
+    }
+
+    return *Manager;
+}
+
 void HttpClient::BeginSession()
 {
     RequestSessionCanceled = false;
@@ -60,7 +75,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
         request.setRawHeader("User-Agent", "NickelUpdater");
         request.setRawHeader("Accept", acceptHeader);
 
-        QScopedPointer<QNetworkReply> reply(Manager.get(request));
+        QScopedPointer<QNetworkReply> reply(GetManager().get(request));
         ActiveReply = reply.data();
         QEventLoop loop;
         bool timedOut = false;
@@ -82,6 +97,8 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
                 Log("TLS error for %s: %s", qPrintable(currentUrl.toString()), qPrintable(error.errorString()));
             }
         });
+        // restart on every progress update, so the timeout is based on inactivity rather than total transfer time
+        QObject::connect(reply.data(), &QNetworkReply::downloadProgress, [&timeoutTimer]() { timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS); });
         timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS);
         loop.exec();
         timeoutTimer.stop();
