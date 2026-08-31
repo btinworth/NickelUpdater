@@ -63,15 +63,8 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
             return {};
         }
 
-        const auto commitHash = GetCommitHash(httpClient, pluginId, tagName);
-        if (commitHash.isEmpty())
-        {
-            return {};
-        }
-
         PluginRelease release;
         release.KoboRootUrl = downloadUrl;
-        release.TagName = QString("%1@%2").arg(tagName, commitHash);
         release.Size = static_cast<qint64>(assetObject.value("size").toDouble());
 
         // "digest" is only present for assets uploaded after GitHub added checksums; format is "sha256:<hex>"
@@ -81,23 +74,16 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
             release.Sha256Digest = digest.mid(7);
         }
 
+        // prefer the asset's own content digest over its upload timestamp to detect the tag/asset being replaced, without a second API call
+        const auto fingerprint = release.Sha256Digest.isEmpty() ? assetObject.value("updated_at").toString() : release.Sha256Digest;
+        if (fingerprint.isEmpty())
+        {
+            return {};
+        }
+
+        release.TagName = QString("%1@%2").arg(tagName, fingerprint);
         return release;
     }
 
     return {};
-}
-
-QString GitHubInterface::GetCommitHash(HttpClient& httpClient, const QString& pluginId, const QString& tagName)
-{
-    // tagName comes from the GitHub API response, not just from a trusted literal, so it must be encoded before use in a URL path segment
-    const auto encodedTagName = QString::fromUtf8(QUrl::toPercentEncoding(tagName));
-    const auto url = QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, encodedTagName);
-
-    QByteArray output;
-    if (!httpClient.Get(url, &output, "application/vnd.github.sha"))
-    {
-        return {};
-    }
-
-    return QString::fromUtf8(output).trimmed();
 }
