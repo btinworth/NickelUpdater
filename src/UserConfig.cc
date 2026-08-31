@@ -17,8 +17,15 @@ bool UserConfig::Load(const QString& path)
     QSet<QString> seenPluginIds;
 
     QFile file(path);
+    if (!file.exists())
+    {
+        Log("Config file does not exist: %s", qPrintable(path));
+        return false;
+    }
+
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        Log("Failed to open config file %s: %s", qPrintable(path), qPrintable(file.errorString()));
         return false;
     }
 
