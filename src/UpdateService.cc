@@ -7,6 +7,7 @@
 #include <QProcess>
 #include <QSaveFile>
 #include <cstring>
+#include <unistd.h>
 
 UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
 {
@@ -110,7 +111,14 @@ bool UpdateService::IsValidArchive(const PluginRelease& release, const QByteArra
 bool UpdateService::PublishUpdate(const UserConfig& config, const QByteArray& archive)
 {
     QSaveFile file(KOBOROOT_PATH);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(archive) != archive.size() || !file.commit())
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(archive) != archive.size() || !file.flush())
+    {
+        Log("Failed to publish KoboRoot.tgz");
+        return false;
+    }
+
+    // flush to disk before the commit's rename, so a fast reboot can't leave a truncated file
+    if (fsync(file.handle()) != 0 || !file.commit())
     {
         Log("Failed to publish KoboRoot.tgz");
         return false;
@@ -122,7 +130,10 @@ bool UpdateService::PublishUpdate(const UserConfig& config, const QByteArray& ar
         return false;
     }
 
-    if (!QProcess::startDetached("reboot"))
+    // flush the renamed directory entry too, since sync() covers what fsync on the file alone doesn't
+    sync();
+
+    if (!QProcess::startDetached("/sbin/reboot"))
     {
         Log("Failed to reboot after publishing KoboRoot.tgz");
         return false;
