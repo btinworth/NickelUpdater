@@ -4,12 +4,19 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QScopedPointer>
+#include <QSslError>
+#include <QSslSocket>
 #include <QTimer>
 #include <QUrl>
 
 namespace
 {
 const int HTTP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
+}
+
+HttpClient::HttpClient()
+{
+    Log("TLS support: %s (library: %s)", QSslSocket::supportsSsl() ? "yes" : "no", qPrintable(QSslSocket::sslLibraryVersionString()));
 }
 
 void HttpClient::BeginSession()
@@ -69,6 +76,12 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
         });
 
         QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        QObject::connect(reply.data(), QOverload<const QList<QSslError>&>::of(&QNetworkReply::sslErrors), [&currentUrl](const QList<QSslError>& errors) {
+            for (const auto& error : errors)
+            {
+                Log("TLS error for %s: %s", qPrintable(currentUrl.toString()), qPrintable(error.errorString()));
+            }
+        });
         timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS);
         loop.exec();
         timeoutTimer.stop();

@@ -8,6 +8,8 @@
 class HttpClient
 {
 public:
+    HttpClient();
+
     void BeginSession();
     void CancelSession();
     bool IsSessionCanceled() const;
