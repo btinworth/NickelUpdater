@@ -31,10 +31,10 @@ private slots:
     void OnUpdateFinished(UpdateService::Result result);
 
 private:
-    bool IsUpdating;
-    bool UsbConnected;
+    bool IsUpdating = false;
+    bool UsbConnected = false;
     QThread WorkerThread;
-    UpdateWorker* Worker;
+    UpdateWorker* Worker = nullptr;
 
     static void CreateConfig(const char* filePath, const char* tmplFilePath);
 };

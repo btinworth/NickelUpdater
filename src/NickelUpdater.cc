@@ -9,7 +9,6 @@ QObject* (*WirelessManagerInstance)() = nullptr;
 QObject* (*PlugWorkflowManagerInstance)() = nullptr;
 
 NickelUpdater::NickelUpdater()
-    : IsUpdating(false), UsbConnected(false), Worker(new UpdateWorker())
 {
     qRegisterMetaType<UserConfig>();
     qRegisterMetaType<UpdateService::Result>();
@@ -17,6 +16,7 @@ NickelUpdater::NickelUpdater()
     CreateConfig(NICKELUPDATER_CONF, NICKELUPDATER_TMPL);
 
     // the worker owns its own HttpClient/QNetworkAccessManager so its blocking network calls never stall this (nickel's GUI) thread
+    Worker = new UpdateWorker();
     Worker->moveToThread(&WorkerThread);
     connect(&WorkerThread, &QThread::finished, Worker, &QObject::deleteLater);
     connect(this, &NickelUpdater::RequestUpdate, Worker, &UpdateWorker::Run);
@@ -71,8 +71,6 @@ void NickelUpdater::OnUpdateFinished(UpdateService::Result result)
         break;
     case UpdateService::Result::Updated:
         Log("Update downloaded; will finish installing on next reboot");
-        break;
-    default:
         break;
     }
 
