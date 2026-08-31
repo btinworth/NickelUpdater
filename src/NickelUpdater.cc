@@ -49,6 +49,7 @@ void NickelUpdater::OnNetworkConnected()
     switch (result)
     {
     case UpdateService::Result::Failed:
+    case UpdateService::Result::Deferred:
         break;
     case UpdateService::Result::NoUpdates:
         Log("No updates to apply");

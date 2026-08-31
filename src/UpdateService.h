@@ -9,6 +9,7 @@ public:
     enum class Result
     {
         Failed,
+        Deferred,
         NoUpdates,
         Updated,
     };

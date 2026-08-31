@@ -2,11 +2,19 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include "Log.h"
+#include <QFile>
 #include <QProcess>
 #include <QSaveFile>
 
 UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
 {
+    // defer if KoboRoot.tgz already exists
+    if (QFile::exists(KOBOROOT_PATH))
+    {
+        Log("KoboRoot.tgz is already pending install; deferring update");
+        return Result::Deferred;
+    }
+
     bool hadFailures = false;
     // plugins are checked in the order they appear in the config, and only the first one with an update is applied
     for (const auto& plugin : config.GetPlugins())
