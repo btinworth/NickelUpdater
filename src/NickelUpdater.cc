@@ -55,7 +55,7 @@ void NickelUpdater::OnNetworkConnected()
         Log("No updates to apply");
         break;
     case UpdateService::Result::Updated:
-        Log("Update finished");
+        Log("Update downloaded; will finish installing on next reboot");
         break;
     default:
         break;

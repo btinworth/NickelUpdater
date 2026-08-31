@@ -1,6 +1,7 @@
 #include "Constants.h"
 #include "Log.h"
 #include "NickelUpdater.h"
+#include "Toast.h"
 #include <NickelHook.h>
 #include <QDir>
 
@@ -69,6 +70,18 @@ static struct nh_dlsym NickelUpdaterDlsym[] = {
         .name = "_ZN19PlugWorkflowManager14sharedInstanceEv",
         .out = nh_symoutptr(PlugWorkflowManagerInstance),
         .desc = "PlugWorkflowManager::sharedInstance",
+    },
+    {
+        .name = "_ZN20MainWindowController14sharedInstanceEv",
+        .out = nh_symoutptr(MainWindowControllerInstance),
+        .desc = "MainWindowController::sharedInstance",
+        .optional = true,
+    },
+    {
+        .name = "_ZN20MainWindowController5toastERK7QStringS2_i",
+        .out = nh_symoutptr(MainWindowControllerToast),
+        .desc = "MainWindowController::toast",
+        .optional = true,
     },
     {0},
 };

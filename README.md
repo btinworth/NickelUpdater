@@ -24,6 +24,8 @@ Keep `installed_tag@installed_commit` blank on first install. NickelUpdater fill
 
 Plugins are checked in the order they are listed, and only one plugin is updated per run. Any remaining plugins are picked up on the next network connection.
 
+Updates are not applied immediately, they are installed on the next reboot.
+
 ```conf
 # NickelUpdater configuration
 # Format: owner/repo = installed_tag@installed_commit

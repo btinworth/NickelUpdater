@@ -2,9 +2,9 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include "Log.h"
+#include "Toast.h"
 #include <QCryptographicHash>
 #include <QFile>
-#include <QProcess>
 #include <QSaveFile>
 #include <QTextStream>
 #include <cstring>
@@ -162,13 +162,9 @@ bool UpdateService::PublishUpdate(const QString& pluginId, const QString& tagNam
     // flush the renamed directory entry too, since sync() covers what fsync on the file alone doesn't
     sync();
 
-    if (!QProcess::startDetached("/sbin/reboot"))
-    {
-        Log("Failed to reboot after publishing KoboRoot.tgz");
-        return false;
-    }
-
-    Log("Published KoboRoot.tgz");
+    // no forced reboot; nickel applies KoboRoot.tgz on the user's next natural reboot
+    Log("Published KoboRoot.tgz; will be installed on next reboot");
+    ShowToast("NickelUpdater", QString("%1 update ready; will be installed on next reboot").arg(pluginId), 5000);
     return true;
 }
 
