@@ -16,6 +16,8 @@ public slots:
 
 signals:
     void Finished(UpdateService::Result result);
+    // emitted from the worker thread; queued across to the GUI thread by Qt's auto-connection, since ShowToast is not thread-safe
+    void ToastRequested(QString primary, QString secondary, int milliseconds);
 
 private:
     HttpClient Client;

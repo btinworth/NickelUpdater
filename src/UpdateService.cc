@@ -2,7 +2,6 @@
 #include "Constants.h"
 #include "GitHubInterface.h"
 #include "Log.h"
-#include "Toast.h"
 #include <QCryptographicHash>
 #include <QFile>
 #include <QSaveFile>
@@ -10,7 +9,7 @@
 #include <cstring>
 #include <unistd.h>
 
-UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient)
+UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpClient, const ToastCallback& requestToast)
 {
     ResolvePendingUpdate(config);
 
@@ -37,14 +36,14 @@ UpdateService::Result UpdateService::Run(UserConfig& config, HttpClient& httpCli
             continue;
         }
 
-        // publishing reboots the device, so never do it from a half finished download
+        // publishing writes straight to KoboRoot.tgz, so never do it from a half finished download
         if (httpClient.IsSessionCanceled())
         {
             Log("Session canceled; not publishing update for %s", qPrintable(plugin.PluginId));
             return Result::Failed;
         }
 
-        return PublishUpdate(plugin.PluginId, result.TagName, result.Archive) ? Result::Updated : Result::Failed;
+        return PublishUpdate(plugin.PluginId, result.TagName, result.Archive, requestToast) ? Result::Updated : Result::Failed;
     }
 
     return hadFailures ? Result::Failed : Result::NoUpdates;
@@ -136,7 +135,7 @@ bool UpdateService::IsValidArchive(const PluginRelease& release, const QByteArra
     return true;
 }
 
-bool UpdateService::PublishUpdate(const QString& pluginId, const QString& tagName, const QByteArray& archive)
+bool UpdateService::PublishUpdate(const QString& pluginId, const QString& tagName, const QByteArray& archive, const ToastCallback& requestToast)
 {
     QSaveFile file(KOBOROOT_PATH);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(archive) != archive.size() || !file.flush())
@@ -164,7 +163,11 @@ bool UpdateService::PublishUpdate(const QString& pluginId, const QString& tagNam
 
     // no forced reboot; nickel applies KoboRoot.tgz on the user's next natural reboot
     Log("Published KoboRoot.tgz; will be installed on next reboot");
-    ShowToast("NickelUpdater", QString("%1 update ready; will be installed on next reboot").arg(pluginId), 5000);
+    if (requestToast)
+    {
+        requestToast("Plugin Updated", QString("%1 has been updated\nReboot to complete installation").arg(pluginId), 5000);
+    }
+
     return true;
 }
 

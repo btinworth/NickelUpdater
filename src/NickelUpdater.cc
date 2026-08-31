@@ -1,6 +1,7 @@
 #include "NickelUpdater.h"
 #include "Constants.h"
 #include "Log.h"
+#include "Toast.h"
 #include "UpdateWorker.h"
 #include <QDir>
 #include <QFile>
@@ -22,6 +23,7 @@ NickelUpdater::NickelUpdater()
     connect(this, &NickelUpdater::RequestUpdate, Worker, &UpdateWorker::Run);
     connect(this, &NickelUpdater::RequestCancel, Worker, &UpdateWorker::Cancel);
     connect(Worker, &UpdateWorker::Finished, this, &NickelUpdater::OnUpdateFinished);
+    connect(Worker, &UpdateWorker::ToastRequested, this, &NickelUpdater::OnToastRequested);
     WorkerThread.start();
 }
 
@@ -75,6 +77,12 @@ void NickelUpdater::OnUpdateFinished(UpdateService::Result result)
     }
 
     IsUpdating = false;
+}
+
+void NickelUpdater::OnToastRequested(const QString& primary, const QString& secondary, int milliseconds)
+{
+    // runs on this (GUI) thread via the queued ToastRequested signal, since MainWindowController belongs to it
+    ShowToast(primary, secondary, milliseconds);
 }
 
 void NickelUpdater::OnNetworkDisconnected()

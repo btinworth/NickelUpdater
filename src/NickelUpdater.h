@@ -29,6 +29,7 @@ signals:
 
 private slots:
     void OnUpdateFinished(UpdateService::Result result);
+    void OnToastRequested(const QString& primary, const QString& secondary, int milliseconds);
 
 private:
     bool IsUpdating = false;

@@ -24,7 +24,7 @@ Keep `installed_tag@installed_commit` blank on first install. NickelUpdater fill
 
 Plugins are checked in the order they are listed, and only one plugin is updated per run. Any remaining plugins are picked up on the next network connection.
 
-Updates are not applied immediately, they are installed on the next reboot.
+A notification is displayed once an update is downloaded; it will be installed the next time you reboot your Kobo.
 
 ```conf
 # NickelUpdater configuration
