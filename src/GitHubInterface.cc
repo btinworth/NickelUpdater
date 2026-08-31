@@ -2,6 +2,22 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
+
+namespace
+{
+bool IsTrustedDownloadUrl(const QString& url)
+{
+    const QUrl parsed(url);
+    if (parsed.scheme() != "https")
+    {
+        return false;
+    }
+
+    const auto host = parsed.host();
+    return host == "github.com" || host.endsWith(".github.com") || host == "githubusercontent.com" || host.endsWith(".githubusercontent.com");
+}
+}
 
 PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QString& pluginId)
 {
@@ -41,6 +57,12 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
             continue;
         }
 
+        const auto downloadUrl = assetObject.value("browser_download_url").toString();
+        if (!IsTrustedDownloadUrl(downloadUrl))
+        {
+            return {};
+        }
+
         const auto commitHash = GetCommitHash(httpClient, pluginId, tagName);
         if (commitHash.isEmpty())
         {
@@ -48,7 +70,7 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
         }
 
         PluginRelease release;
-        release.KoboRootUrl = assetObject.value("browser_download_url").toString();
+        release.KoboRootUrl = downloadUrl;
         release.TagName = QString("%1@%2").arg(tagName, commitHash);
         release.Size = static_cast<qint64>(assetObject.value("size").toDouble());
 
@@ -67,7 +89,9 @@ PluginRelease GitHubInterface::GetLatestRelease(HttpClient& httpClient, const QS
 
 QString GitHubInterface::GetCommitHash(HttpClient& httpClient, const QString& pluginId, const QString& tagName)
 {
-    const auto url = QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, tagName);
+    // tagName comes from the GitHub API response, not just from a trusted literal, so it must be encoded before use in a URL path segment
+    const auto encodedTagName = QString::fromUtf8(QUrl::toPercentEncoding(tagName));
+    const auto url = QString("https://api.github.com/repos/%1/commits/%2").arg(pluginId, encodedTagName);
 
     QByteArray output;
     if (!httpClient.Get(url, &output, "application/vnd.github.sha"))

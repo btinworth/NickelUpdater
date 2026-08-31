@@ -1,7 +1,15 @@
 #include "UserConfig.h"
+#include "Log.h"
 #include <QFile>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
+
+namespace
+{
+// GitHub owner/repo names only allow alphanumerics, '.', '-', and '_'
+const QRegularExpression PluginIdPattern("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$");
+}
 
 bool UserConfig::Load(const QString& path)
 {
@@ -31,6 +39,12 @@ bool UserConfig::Load(const QString& path)
 
         const auto pluginId = line.left(equals).trimmed();
         const auto installedVersion = line.mid(equals + 1).trimmed();
+
+        if (!PluginIdPattern.match(pluginId).hasMatch())
+        {
+            Log("Ignoring invalid plugin id in config: %s", qPrintable(pluginId));
+            continue;
+        }
 
         if (seenPluginIds.contains(pluginId))
         {
