@@ -9,7 +9,7 @@ class ConfigParseTest : public QObject
 
 private slots:
     void parsesValidPluginRows();
-    void acceptsArbitraryPluginIds();
+    void rejectsInvalidPluginIds();
     void saveWritesDeterministicFormat();
     void updatesInstalledVersion();
 

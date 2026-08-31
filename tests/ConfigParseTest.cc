@@ -37,7 +37,7 @@ void ConfigParseTest::parsesValidPluginRows()
     QCOMPARE(plugins.at(1).TagName, QString(""));
 }
 
-void ConfigParseTest::acceptsArbitraryPluginIds()
+void ConfigParseTest::rejectsInvalidPluginIds()
 {
     const auto config = LoadConfig(
         "missingequals\n"
@@ -46,13 +46,9 @@ void ConfigParseTest::acceptsArbitraryPluginIds()
         "bad owner/repo = v3\n");
 
     const auto& plugins = config.GetPlugins();
-    QCOMPARE(plugins.size(), 3);
-    QCOMPARE(plugins.at(0).PluginId, QString("bad/format/row"));
-    QCOMPARE(plugins.at(0).TagName, QString("v1"));
-    QCOMPARE(plugins.at(1).PluginId, QString("good/repo"));
-    QCOMPARE(plugins.at(1).TagName, QString("v2"));
-    QCOMPARE(plugins.at(2).PluginId, QString("bad owner/repo"));
-    QCOMPARE(plugins.at(2).TagName, QString("v3"));
+    QCOMPARE(plugins.size(), 1);
+    QCOMPARE(plugins.at(0).PluginId, QString("good/repo"));
+    QCOMPARE(plugins.at(0).TagName, QString("v2"));
 }
 
 void ConfigParseTest::saveWritesDeterministicFormat()
