@@ -65,21 +65,26 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
     const int maxRedirects = 5;
     for (int redirectCount = 0; redirectCount <= maxRedirects; ++redirectCount)
     {
+        // check before each hop so cancellation also stops a redirect chain
         if (RequestSessionCanceled)
         {
             Log("HTTP GET canceled before request for %s", qPrintable(currentUrl.toString()));
             return false;
         }
 
+        // keep the request identifiable to the server and ask for the caller's response format
         QNetworkRequest request(currentUrl);
         request.setRawHeader("User-Agent", "NickelUpdater");
         request.setRawHeader("Accept", acceptHeader);
 
+        // the reply is deleted at the end of this iteration; expose it while active so
+        // CancelSession() can abort the request from another event-driven callback
         QScopedPointer<QNetworkReply> reply(GetManager().get(request));
         ActiveReply = reply.data();
         QEventLoop loop;
         bool timedOut = false;
 
+        // aborting the reply causes the event loop to finish through its normal path
         QTimer timeoutTimer;
         timeoutTimer.setSingleShot(true);
         QObject::connect(&timeoutTimer, &QTimer::timeout, [&timedOut, &reply]() {
@@ -90,6 +95,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
             }
         });
 
+        // a completed reply is the event-loop exit condition for this request
         QObject::connect(reply.data(), &QNetworkReply::finished, &loop, &QEventLoop::quit);
         QObject::connect(reply.data(), QOverload<const QList<QSslError>&>::of(&QNetworkReply::sslErrors), [&currentUrl](const QList<QSslError>& errors) {
             for (const auto& error : errors)
@@ -97,11 +103,15 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
                 Log("TLS error for %s: %s", qPrintable(currentUrl.toString()), qPrintable(error.errorString()));
             }
         });
-        // restart on every progress update, so the timeout is based on inactivity rather than total transfer time
+
+        // wait synchronously while still processing network and cancellation events
+        // restart on progress so the timeout measures inactivity and not total transfer time
         QObject::connect(reply.data(), &QNetworkReply::downloadProgress, [&timeoutTimer]() { timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS); });
         timeoutTimer.start(HTTP_REQUEST_TIMEOUT_MS);
         loop.exec();
         timeoutTimer.stop();
+
+        // no further cancellation callback should target this completed reply
         ActiveReply = nullptr;
 
         if (RequestSessionCanceled)
@@ -122,10 +132,13 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
             return false;
         }
 
+        // follow redirects explicitly so each destination can be checked for https
         const auto redirectTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
         if (redirectTarget.isEmpty())
         {
             const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+            // network success only means the exchange completed - accept HTTP success codes explicitly
             if (statusCode < 200 || statusCode >= 300)
             {
                 Log("HTTP GET returned status %d for %s", statusCode, qPrintable(currentUrl.toString()));
@@ -134,12 +147,14 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
 
             if (output != nullptr)
             {
+                // leave output untouched when the caller only needs the success result
                 *output = reply->readAll();
             }
 
             return true;
         }
 
+        // resolve relative location values against the URL that produced the response
         currentUrl = currentUrl.resolved(redirectTarget);
         if (currentUrl.scheme() != "https")
         {
@@ -149,6 +164,7 @@ bool HttpClient::Get(const QString& url, QByteArray* output, const QByteArray& a
 
         if (redirectCount == maxRedirects)
         {
+            // stop looping even if the server keeps returning another redirect
             Log("Too many redirects for %s", qPrintable(url));
             return false;
         }
