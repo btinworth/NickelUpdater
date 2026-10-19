@@ -2,6 +2,7 @@
 KoboRoot.tgz
 
 # build artifacts
+/build/
 /libnickelupdater.so
 /src/*.o
 /src/*.moc
