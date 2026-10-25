@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.21)
 project(NickelUpdater LANGUAGES C CXX)
 
 option(BUILD_TESTING "Build NickelUpdater unit tests" OFF)
+set(AUTOGEN_BUILD_DIR "" CACHE PATH
+    "Directory for Qt-generated files for the nickelupdater target")
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_C_STANDARD 11)
@@ -38,6 +40,10 @@ file(GLOB NICKELUPDATER_SOURCES CONFIGURE_DEPENDS
 add_library(nickelupdater SHARED
     ${NICKELUPDATER_SOURCES}
 )
+if(AUTOGEN_BUILD_DIR)
+    set_property(TARGET nickelupdater PROPERTY AUTOGEN_BUILD_DIR
+        "${AUTOGEN_BUILD_DIR}")
+endif()
 set_target_properties(nickelupdater PROPERTIES
     BUILD_RPATH "/usr/local/Kobo;/usr/local/Qt-5.2.1-arm/lib"
     INSTALL_RPATH "/usr/local/Kobo;/usr/local/Qt-5.2.1-arm/lib"
